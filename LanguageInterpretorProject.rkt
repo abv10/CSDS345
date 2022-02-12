@@ -45,9 +45,18 @@
       [(null? (variables state)) (cons (cons variable (variables state)) (cons (cons value (values state)) (emptylist)))]
       [(eq? variable (car (variables state))) (cons (variables state) (cons (cons value (cdr (values state))) (emptylist)))]
       [else (cons
-             (cons (car (variables state)) (variables (add variable value (cons (cdr (variables state)) (cons (cdr (values state)) (emptylist))))))
-             (cons (cons (car (values state)) (values (add variable value (cons (cdr (variables state)) (cons (cdr (values state)) (emptylist)))))) (emptylist))
+             (cons (car (variables state)) (variables (add variable value (statecdr state))))
+             (cons (cons (car (values state)) (values (add variable value (statecdr state)))) (emptylist))
              )]
+      )))
+
+; gets the value of a variable
+(define get
+  (lambda (variable state)
+    (cond
+      [(null? (variables state)) (error 'notdeclarederror)]
+      [(eq? variable (car (variables state))) (car (values state))]
+      [else (get variable (statecdr state))]
       )))
 
 (define operator
@@ -79,6 +88,10 @@
 (define values
   (lambda (state)
     (cadr state)))
+
+(define statecdr
+  (lambda (state)
+    (cons (cdr (variables state)) (cons (cdr (values state)) (emptylist)))))
 
 (define emptylist
   (lambda ()
