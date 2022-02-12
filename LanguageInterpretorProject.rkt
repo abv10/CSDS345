@@ -5,10 +5,10 @@
     (cond
       [(number? lis)lis]
       [(boolean? lis) lis]
+      [(and (eq? (operator lis) '-) (null? (firstexpressioncdr lis))) (- (mvalue (firstexpression lis)))]
       [(eq? (operator lis) '*)(* (mvalue (firstexpression lis)) (mvalue (secondexpression lis)))]
       [(eq? (operator lis) '+)(+ (mvalue (firstexpression lis)) (mvalue (secondexpression lis)))]
       [(eq? (operator lis) '-)(- (mvalue (firstexpression lis)) (mvalue (secondexpression lis)))]
-      ;still have to figure out the unary - operator (maybe check if there are two elements in iist or one
       [(eq? (operator lis) '/)(quotient (mvalue (firstexpression lis)) (mvalue (secondexpression lis)))]
       [(eq? (operator lis) '%)(modulo (mvalue (firstexpression lis)) (mvalue (secondexpression lis)))]
       [(and (eq? (operator lis) '==) (boolean? (mvalue (firstexpression lis))))(eq? (mvalue (firstexpression lis))(mvalue (secondexpression lis)))]
@@ -35,3 +35,7 @@
 (define secondexpression
   (lambda (lis)
     (caddr lis)))
+
+(define firstexpressioncdr
+  (lambda (lis)
+    (cddr lis)))
