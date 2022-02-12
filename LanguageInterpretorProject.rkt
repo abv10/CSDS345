@@ -1,41 +1,43 @@
 #lang racket
 
 (define mvalue
-  (lambda (lis)
+  (lambda (lis state)
     (cond
       [(number? lis) lis]
       [(boolean? lis) lis]
-      [(and (eq? (operator lis) '-)(null? (firstexpressioncdr lis))) (- (mvalue (firstexpression lis)))]
-      [(eq? (operator lis) '*) (* (mvalue (firstexpression lis)) (mvalue (secondexpression lis)))]
-      [(eq? (operator lis) '+) (+ (mvalue (firstexpression lis)) (mvalue (secondexpression lis)))]
-      [(eq? (operator lis) '-) (- (mvalue (firstexpression lis)) (mvalue (secondexpression lis)))]
-      [(eq? (operator lis) '/) (quotient (mvalue (firstexpression lis)) (mvalue (secondexpression lis)))]
-      [(eq? (operator lis) '%) (modulo (mvalue (firstexpression lis)) (mvalue (secondexpression lis)))]
-      [(eq? (operator lis) '==) (mboolean lis)]
-      [(eq? (operator lis) '!=) (mboolean lis)]
-      [(eq? (operator lis) '<) (mboolean lis)]
-      [(eq? (operator lis) '>) (mboolean lis)]
-      [(eq? (operator lis) '>=) (mboolean lis)]
-      [(eq? (operator lis) '<=) (mboolean lis)]
-      [(eq? (operator lis) '!) (mboolean lis)]
-      [(eq? (operator lis) '||) (mboolean lis)]
-      [(eq? (operator lis) '&&) (mboolean lis)]
+      [(atom? lis) (get lis state)]
+      [(and (eq? (operator lis) '-)(null? (firstexpressioncdr lis))) (- (mvalue (firstexpression lis) state))]
+      [(eq? (operator lis) '*) (* (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state))]
+      [(eq? (operator lis) '+) (+ (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state))]
+      [(eq? (operator lis) '-) (- (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state))]
+      [(eq? (operator lis) '/) (quotient (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state))]
+      [(eq? (operator lis) '%) (modulo (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state))]
+      [(eq? (operator lis) '==) (mboolean lis state)]
+      [(eq? (operator lis) '!=) (mboolean lis state)]
+      [(eq? (operator lis) '<) (mboolean lis state)]
+      [(eq? (operator lis) '>) (mboolean lis state)]
+      [(eq? (operator lis) '>=) (mboolean lis state)]
+      [(eq? (operator lis) '<=) (mboolean lis state)]
+      [(eq? (operator lis) '!) (mboolean lis state)]
+      [(eq? (operator lis) '||) (mboolean lis state)]
+      [(eq? (operator lis) '&&) (mboolean lis state)]
       )))
 
 ; evaluates boolean expressions. I think it will only be called by mvalue
 (define mboolean
-  (lambda (lis)
+  (lambda (lis state)
     (cond
       [(number? lis) lis]
-      [(eq? (operator lis) '==) (eq? (mvalue (firstexpression lis))(mvalue (secondexpression lis)))]
-      [(eq? (operator lis) '!=) (not (eq? (mvalue (firstexpression lis))(mvalue (secondexpression lis))))]
-      [(eq? (operator lis) '<) (< (mvalue (firstexpression lis)) (mvalue (secondexpression lis)))]
-      [(eq? (operator lis) '>) (> (mvalue (firstexpression lis)) (mvalue (secondexpression lis)))]
-      [(eq? (operator lis) '>=) (>= (mvalue (firstexpression lis)) (mvalue (secondexpression lis)))]
-      [(eq? (operator lis) '<=) (<= (mvalue (firstexpression lis)) (mvalue (secondexpression lis)))]
-      [(eq? (operator lis) '!) (not (mvalue (firstexpression lis)))]
-      [(eq? (operator lis) '||) (or (mvalue (firstexpression lis)) (mvalue (secondexpression lis)))]
-      [(eq? (operator lis) '&&) (and (mvalue (firstexpression lis))(mvalue (secondexpression lis)))]
+      [(atom? lis) (get lis state)]
+      [(eq? (operator lis) '==) (eq? (mvalue (firstexpression lis) state ) (mvalue (secondexpression lis) state))]
+      [(eq? (operator lis) '!=) (not (eq? (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state)))]
+      [(eq? (operator lis) '<) (< (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state))]
+      [(eq? (operator lis) '>) (> (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state))]
+      [(eq? (operator lis) '>=) (>= (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state))]
+      [(eq? (operator lis) '<=) (<= (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state))]
+      [(eq? (operator lis) '!) (not (mvalue (firstexpression lis) state))]
+      [(eq? (operator lis) '||) (or (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state))]
+      [(eq? (operator lis) '&&) (and (mvalue (firstexpression lis) state)(mvalue (secondexpression lis) state))]
       )))
 
 ; adds or changes the value of a variable in the state. Not sure if I should add abstraction for getting the car and cdr of the variables and values lists
@@ -58,6 +60,14 @@
       [(eq? variable (car (variables state))) (car (values state))]
       [else (get variable (statecdr state))]
       )))
+
+; declares a variable. Format: (declare '(var 'x 5) state)
+(define declare
+  (lambda (lis state)
+    (if (null? (firstexpressioncdr lis)) ; maybe change to a cond and return an error if the variable has already been declared
+        (add (firstexpression lis) 'declared state)
+        (add (firstexpression lis) (mvalue (secondexpression lis)) state)
+        )))
 
 (define operator
   (lambda (lis)
@@ -96,3 +106,7 @@
 (define emptylist
   (lambda ()
     '()))
+
+(define atom?
+  (lambda (x)
+    (and (not (pair? x)) (not (null? x)))))
