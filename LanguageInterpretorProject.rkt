@@ -62,7 +62,20 @@
       [else (get variable (statecdr state))]
     )))
 
-; declares a variable. Format: (declare '(var 'x 5) state)
+; changes the state
+(define mstate
+  (lambda (lis state)
+    (cond
+      [(null? lis) state]
+      [(list? (operator lis)) (mstate (cdr lis) (mstate (operator lis) state))]
+      [(eq? (operator lis) 'var) (declare lis state)]
+      [(eq? (operator lis) '=) (assign lis state)]
+      [(eq? (operator lis) 'return) (return lis state)]
+      [(eq? (operator lis) 'if) (ifstatement lis state)]
+      [else state]
+    )))
+
+; declares a variable. Format: (declare '(var x 5) state)
 (define declare
   (lambda (lis state)
     (if (null? (firstexpressioncdr lis)) ; maybe change to a cond and return an error if the variable has already been declared
@@ -85,6 +98,15 @@
       [else (add 'return (mvalue lis state) state)]
     )))
 
+; executes an if statement
+(define ifstatement
+  (lambda (lis state)
+    (cond
+      [(mvalue (ifcondition lis) state) (mstate (thenstatement lis) (mstate (ifcondition lis) state))]
+      [(null? (thenstatementcdr lis)) (mstate (ifcondition lis) state)]
+      [else (mstate (elsestatement lis) state)]
+    )))
+
 (define operator
   (lambda (lis)
     (car lis)))
@@ -101,6 +123,22 @@
 (define firstexpressioncdr
   (lambda (lis)
     (cddr lis)))
+
+(define ifcondition
+  (lambda (lis)
+    (cadr lis)))
+
+(define thenstatement
+  (lambda (lis)
+    (caddr lis)))
+
+(define elsestatement
+  (lambda (lis)
+    (cadddr lis)))
+
+(define thenstatementcdr
+  (lambda (lis)
+    (cdddr lis)))
 
 ; I have the state as two separate lists. One for variables, one for values. The initial state is then '(()())
 (define initialstate
