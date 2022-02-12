@@ -69,6 +69,12 @@
         (add (firstexpression lis) (mvalue (secondexpression lis)) state)
         )))
 
+; assigns a value to a variable
+(define assign
+  (lambda (lis state)
+    (add (firstexpression lis) (mvalue (secondexpression lis) state) state)
+    ))
+
 (define operator
   (lambda (lis)
     (car lis)))
