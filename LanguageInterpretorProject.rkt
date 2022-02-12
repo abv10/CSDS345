@@ -21,6 +21,7 @@
       [(eq? (operator lis) '!) (mboolean lis state)]
       [(eq? (operator lis) '||) (mboolean lis state)]
       [(eq? (operator lis) '&&) (mboolean lis state)]
+      [(eq? (operator lis) 'return) (mvalue (firstexpression lis) state)] ; not sure if this is the right place for it
       )))
 
 ; evaluates boolean expressions. I think it will only be called by mvalue
@@ -50,7 +51,7 @@
              (cons (car (variables state)) (variables (add variable value (statecdr state))))
              (cons (cons (car (values state)) (values (add variable value (statecdr state)))) (emptylist))
              )]
-      )))
+    )))
 
 ; gets the value of a variable
 (define get
@@ -59,7 +60,7 @@
       [(null? (variables state)) (error 'notdeclarederror)]
       [(eq? variable (car (variables state))) (car (values state))]
       [else (get variable (statecdr state))]
-      )))
+    )))
 
 ; declares a variable. Format: (declare '(var 'x 5) state)
 (define declare
@@ -67,13 +68,22 @@
     (if (null? (firstexpressioncdr lis)) ; maybe change to a cond and return an error if the variable has already been declared
         (add (firstexpression lis) 'declared state)
         (add (firstexpression lis) (mvalue (secondexpression lis)) state)
-        )))
+     )))
 
 ; assigns a value to a variable
 (define assign
   (lambda (lis state)
     (add (firstexpression lis) (mvalue (secondexpression lis) state) state)
     ))
+
+; sets a variable called return in the state
+(define return
+  (lambda (lis state)
+    (cond
+      [(eq? (mvalue lis state) #t) (add 'return 'true state)]
+      [(eq? (mvalue lis state) #f) (add 'return 'false state)]
+      [else (add 'return (mvalue lis state) state)]
+    )))
 
 (define operator
   (lambda (lis)
