@@ -12,6 +12,7 @@
       [(eq? (operator lis) '-) (- (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state))]
       [(eq? (operator lis) '/) (quotient (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state))]
       [(eq? (operator lis) '%) (modulo (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state))]
+      [(eq? (operator lis) '=) (mvalue (secondexpression lis) state)]
       [(eq? (operator lis) '==) (mboolean lis state)]
       [(eq? (operator lis) '!=) (mboolean lis state)]
       [(eq? (operator lis) '<) (mboolean lis state)]
@@ -25,6 +26,7 @@
       )))
 
 ; evaluates boolean expressions. I think it will only be called by mvalue
+;#########THIS ERRORS WITH SOMETHING LIKE '(> (= i (i + 1)) 7) state) SINCE the assignment doesn't return a value right now
 (define mboolean
   (lambda (lis state)
     (cond
@@ -67,11 +69,14 @@
   (lambda (lis state)
     (cond
       [(null? lis) state]
+      [(atom? lis) state]
       [(list? (operator lis)) (mstate (cdr lis) (mstate (operator lis) state))]
       [(eq? (operator lis) 'var) (declare lis state)]
       [(eq? (operator lis) '=) (assign lis state)]
       [(eq? (operator lis) 'return) (return lis state)]
       [(eq? (operator lis) 'if) (ifstatement lis state)]
+      [(eq? (operator lis) 'while) (whileloop lis state)]
+      [(eq? (operator lis) '<) (mstate (firstexpression lis) (mstate (secondexpression lis) state))] ;######START HERE WHEN RESUME###
       [else state]
     )))
 
@@ -80,7 +85,7 @@
   (lambda (lis state)
     (if (null? (firstexpressioncdr lis)) ; maybe change to a cond and return an error if the variable has already been declared
         (add (firstexpression lis) 'declared state)
-        (add (firstexpression lis) (mvalue (secondexpression lis)) state)
+        (add (firstexpression lis) (mvalue (secondexpression lis) state) state)
      )))
 
 ; assigns a value to a variable
@@ -106,6 +111,21 @@
       [(null? (thenstatementcdr lis)) (mstate (ifcondition lis) state)]
       [else (mstate (elsestatement lis) state)]
     )))
+
+(define whileloop
+  (lambda (lis state)
+    (cond
+      [(mvalue (whilecondition lis) state) (whileloop lis (mstate (whileloopbody lis) (mstate (whilecondition lis) state)))]
+      [else (mstate (whilecondition lis) state)]
+    )))
+
+(define whilecondition
+  (lambda (lis)
+    (cadr lis)))
+
+(define whileloopbody
+  (lambda (lis)
+    (caddr lis)))
 
 (define operator
   (lambda (lis)
