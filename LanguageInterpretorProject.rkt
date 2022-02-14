@@ -1,14 +1,17 @@
 #lang racket
+(require "simpleParser.rkt")
 
 (define mvalue
   (lambda (lis state)
     (cond
       [(number? lis) lis]
       [(boolean? lis) lis]
+      [(eq? lis 'true) #t]
+      [(eq? lis 'false) #f]
       [(atom? lis) (get lis state)]
       [(and (eq? (operator lis) '-)(null? (firstexpressioncdr lis))) (- (mvalue (firstexpression lis) state))]
       [(eq? (operator lis) '*) (* (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state))]
-      [(eq? (operator lis) '+) (+ (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state))]
+      [(eq? (operator lis) '+) (+ (mvalue (firstexpression lis) (innerassign lis state)) (mvalue (secondexpression lis) (innerassign lis state)))]
       [(eq? (operator lis) '-) (- (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state))]
       [(eq? (operator lis) '/) (quotient (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state))]
       [(eq? (operator lis) '%) (modulo (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state))]
@@ -24,6 +27,9 @@
       [(eq? (operator lis) '&&) (mboolean lis state)]
       [(eq? (operator lis) 'return) (mvalue (firstexpression lis) state)] ; not sure if this is the right place for it
       )))
+(define innerassign
+  (lambda (lis state)
+    (mstate (firstexpression lis) (mstate (secondexpression lis) state))))
 
 ; evaluates boolean expressions. I think it will only be called by mvalue
 ;#########THIS ERRORS WITH SOMETHING LIKE '(> (= i (i + 1)) 7) state) SINCE the assignment doesn't return a value right now
@@ -63,7 +69,13 @@
       [(eq? variable (car (variables state))) (car (values state))]
       [else (get variable (statecdr state))]
     )))
-
+(define getnoerror
+  (lambda (variable state)
+    (cond
+      [(null? (variables state)) null]
+      [(eq? variable (car (variables state))) (car (values state))]
+      [else (get variable (statecdr state))]
+    )))
 ; changes the state
 (define mstate
   (lambda (lis state)
@@ -76,22 +88,38 @@
       [(eq? (operator lis) 'return) (return lis state)]
       [(eq? (operator lis) 'if) (ifstatement lis state)]
       [(eq? (operator lis) 'while) (whileloop lis state)]
-      [(eq? (operator lis) '<) (mstate (firstexpression lis) (mstate (secondexpression lis) state))] ;######START HERE WHEN RESUME###
+      [(equalityoperator? (operator lis)) (mstate (firstexpression lis) (mstate (secondexpression lis) state))] 
       [else state]
     )))
+
+(define equalityoperator?
+  (lambda (operator)
+    (cond
+      [(eq? '< operator) #t]
+      [(eq? '> operator) #t]
+      [(eq? '!= operator) #t]
+      [(eq? '== operator) #t]
+      [(eq? '<= operator) #t]
+      [(eq? '>= operator) #t]
+      [(eq? '! operator) #t]
+      [(eq? '|| operator) #t]
+      [(eq? '&& operator) #t]
+      [else #f]
+      )))
 
 ; declares a variable. Format: (declare '(var x 5) state)
 (define declare
   (lambda (lis state)
-    (if (null? (firstexpressioncdr lis)) ; maybe change to a cond and return an error if the variable has already been declared
-        (add (firstexpression lis) 'declared state)
-        (add (firstexpression lis) (mvalue (secondexpression lis) state) state)
+    (cond
+      ;[(not (null? (getnoerror (firstexpression lis) state))) (error 'redeclarederror)] 
+      [(null? (firstexpressioncdr lis))(add (firstexpression lis) 'declared state)]
+      [else  (add (firstexpression lis) (mvalue (secondexpression lis) (mstate (secondexpression lis) state)) (mstate (secondexpression lis) state))]
      )))
 
-; assigns a value to a variable
+; assigns a value to a variable #COULD ADD NESTED ASSIGNMENTS IF WE WANT
 (define assign
   (lambda (lis state)
-    (add (firstexpression lis) (mvalue (secondexpression lis) state) state)
+    (add (firstexpression lis) (mvalue (secondexpression lis) state) (mstate (firstexpression lis) (mstate (secondexpression lis) state)))
     ))
 
 ; sets a variable called return in the state
@@ -184,3 +212,33 @@
 (define atom?
   (lambda (x)
     (and (not (pair? x)) (not (null? x)))))
+
+(define interpret
+  (lambda (filename)
+    (get 'return (mstate (parser filename) '(()())))))
+
+;tests
+(interpret "test1.txt")
+(interpret "test2.txt")
+(interpret "test3.txt")
+(interpret "test4.txt")
+(interpret "test5.txt")
+(interpret  "test6.txt")
+(interpret  "test7.txt")
+(interpret  "test8.txt")
+(interpret  "test9.txt")
+(interpret  "test10.txt")
+;(interpret  "test11.txt")
+;(interpret  "test12.txt")
+;(interpret  "test13.txt")
+(interpret  "test14.txt")
+(interpret  "test15.txt")
+(interpret  "test16.txt")
+(interpret  "test17.txt")
+(interpret  "test18.txt")
+(interpret  "test19.txt")
+(interpret  "test20.txt")
+
+;(interpret "etest21.txt")
+;(interpret "etest22.txt")
+;(interpret "etest23.txt")
