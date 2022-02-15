@@ -10,12 +10,12 @@
       [(eq? lis 'false) #f]
       [(and (atom? lis) (eq? (get lis state) 'declared))(error 'notassignederror)]
       [(atom? lis) (get lis state)]
-      [(and (eq? (operator lis) '-)(null? (firstexpressioncdr lis))) (- (mvalue (firstexpression lis) state))]
-      [(eq? (operator lis) '*) (* (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state))]
-      [(eq? (operator lis) '+) (+ (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state))]
-      [(eq? (operator lis) '-) (- (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state))]
-      [(eq? (operator lis) '/) (quotient (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state))]
-      [(eq? (operator lis) '%) (modulo (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state))]
+      [(and (eq? (operator lis) '-)(null? (firstexpressioncdr lis))) (- (mvalue (firstexpression lis) (mstate (firstexpression lis) state)))]
+      [(eq? (operator lis) '*) (* (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) (mstate (firstexpression lis) state)))]
+      [(eq? (operator lis) '+) (+ (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) (mstate (firstexpression lis) state)))]
+      [(eq? (operator lis) '-) (- (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) (mstate (firstexpression lis) state)))]
+      [(eq? (operator lis) '/) (quotient (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) (mstate (firstexpression lis) state)))]
+      [(eq? (operator lis) '%) (modulo (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) (mstate (firstexpression lis) state)))]
       [(eq? (operator lis) '=) (mvalue (secondexpression lis) state)]
       [(eq? (operator lis) '==) (mboolean lis state)]
       [(eq? (operator lis) '!=) (mboolean lis state)]
@@ -67,6 +67,7 @@
       [(eq? variable (car (variables state))) (car (values state))]
       [else (get variable (statecdr state))]
     )))
+
 (define getnoerror
   (lambda (variable state)
     (cond
@@ -87,7 +88,8 @@
       [(eq? (operator lis) 'return) (return lis state)]
       [(eq? (operator lis) 'if) (ifstatement lis state)]
       [(eq? (operator lis) 'while) (whileloop lis state)]
-      [(equalityoperator? (operator lis)) (mstate (firstexpression lis) (mstate (secondexpression lis) state))] 
+      [(equalityoperator? (operator lis)) (mstate (firstexpression lis) (mstate (secondexpression lis) state))]
+      [(not (null? (cdr lis))) (mstate (cdr lis) state)] 
       [else state]
     )))
 
@@ -118,8 +120,10 @@
 ; assigns a value to a variable #COULD ADD NESTED ASSIGNMENTS IF WE WANT
 (define assign
   (lambda (lis state)
-    (add (firstexpression lis) (mvalue (secondexpression lis) (mstate (secondexpression lis) state)) (mstate (secondexpression lis) state))
-    ))
+    (if (eq? (getnoerror (firstexpression lis) state) 'notdeclared)
+        (error 'notdeclarederror)
+        (add (firstexpression lis) (mvalue lis state) (mstate (secondexpression lis) state))
+    )))
 
 ; sets a variable called return in the state
 (define return
@@ -192,6 +196,7 @@
 (define initialstate
   (lambda ()
     '(()())))
+
 ;_______STATE CHANGE RELATED FUNCTIONS, like ADD, REMOVE, GET
 (define variables
   (lambda (state)
@@ -231,8 +236,8 @@
 (interpret  "test10.txt")
 ;(interpret  "test11.txt")
 ;(interpret  "test12.txt")
-(interpret  "test13.txt")
-(interpret  "test14.txt")
+;(interpret  "test13.txt")
+;(interpret  "test14.txt")
 (interpret  "test15.txt")
 (interpret  "test16.txt")
 (interpret  "test17.txt")
@@ -242,7 +247,9 @@
 
 (interpret "etest21.txt")
 (interpret "etest22.txt")
+(interpret "etest23.txt")
 (interpret "etest24.txt")
 (interpret "etest25.txt")
 (interpret "etest26.txt")
-;(interpret "etest23.txt")
+(interpret "etest27.txt")
+(interpret "etest28.txt")
