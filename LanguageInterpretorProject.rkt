@@ -1,4 +1,7 @@
 #lang racket
+Alex Vaslow
+Parker Griffin
+
 (require "simpleParser.rkt")
 
 (define mvalue
