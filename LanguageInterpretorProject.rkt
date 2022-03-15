@@ -54,16 +54,20 @@
 
 (define add
   (lambda (variable value state)
-    (cond
-      
+    (addhelper variable value state #f)))
 
+(define adddeclare
+  (lambda (variable value state)
+    (addhelper variable value state #t)))
+
+(define addhelper
+  (lambda (variable value state declaring)
+    (cond
+      [(eq? #t declaring) (currentlayercons variable value state)] ;SINCE WE ALREADY CHECKED TO SEE IF VARIABLE IS DECLARED, WE JUST PUT IT ON THE BEGINING OF THE FIRST LAYER
       [(and (null? (cdr state)) (null? (currentlayervariables state))) (cons (cons (cons variable (currentlayervariables state)) (cons (cons value (currentlayervalues state)) (emptylist)))(cdr state))]
-      [(null? (currentlayervariables state))(cons (currentlayer state) (add variable value (cdr state)))]; no layer left
+      [(null? (currentlayervariables state))(cons (currentlayer state) (addhelper variable value (cdr state) declaring))]
       [(eq? variable (car (currentlayervariables state))) (cons (cons (currentlayervariables state) (cons (cons value (cdr (currentlayervalues state))) (emptylist)))(cdr state))]
-      [else (cons
-             (cons (car (currentlayervariables state)) (currentlayervariables (add variable value (cdrcurrentlayer state))))
-             (cons (cons (car (currentlayervalues state)) (currentlayervalues (add variable value (cdrcurrentlayer state)))) (emptylist))
-             )]
+      [else (currentlayercons (car (currentlayervariables state)) (car (currentlayervalues state))(addhelper variable value (cdrcurrentlayer state) declaring))]
     )))
 ;***********************MODIFYING FOR LAYER STATE***********
 ;********This works for a layered state but could probably use some abstraction***
@@ -79,12 +83,16 @@
 (define getnoerror
   (lambda (variable state)
     (cond
-      [(and (null? (cdr state)) (null? (currentlayervariables state))) ('notassigned)]
+      [(and (null? (cdr state)) (null? (currentlayervariables state))) 'notdeclared]
       [(null? (variables (currentlayer state))) (getnoerror variable (nextlayers state))]
       [(eq? variable (car (variables (currentlayer state)))) (car (values (currentlayer state)))]
       [else (getnoerror variable (cdrcurrentlayer state))]
     )))
 
+;cons c d (((a)(b))((x y)(x z))) --> (((c d) (d b))((x y)(x z))
+(define currentlayercons
+  (lambda (carvar carval rest)
+    (cons (cons (cons carvar (currentlayervariables rest)) (cons (cons carval (currentlayervalues rest))(emptylist))) (cdr rest))))
 (define currentlayer
   (lambda (state)
     (car state)))
@@ -170,7 +178,7 @@
     (cond
       [(not (eq? (getnoerror (firstexpression lis) state) 'notdeclared)) (error 'redeclarederror)] 
       [(null? (firstexpressioncdr lis))(add (firstexpression lis) 'declared state)]
-      [else  (add (firstexpression lis) (mvalue (secondexpression lis) (mstate (secondexpression lis) state)) (mstate (secondexpression lis) state))]
+      [else  (adddeclare (firstexpression lis) (mvalue (secondexpression lis) (mstate (secondexpression lis) state)) (mstate (secondexpression lis) state))]
      )))
 
 ; assigns a value to a variable #COULD ADD NESTED ASSIGNMENTS IF WE WANT
