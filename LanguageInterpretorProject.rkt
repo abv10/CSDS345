@@ -1,6 +1,6 @@
 #lang racket
-Alex Vaslow
-Parker Griffin
+;Alex Vaslow
+;Parker Griffin
 
 (require "simpleParser.rkt")
 
@@ -51,37 +51,66 @@ Parker Griffin
       )))
 
 ; adds or changes the value of a variable in the state. Not sure if I should add abstraction for getting the car and cdr of the variables and values lists
+
 (define add
   (lambda (variable value state)
     (cond
-      [(null? (variables state)) (cons (cons variable (variables state)) (cons (cons value (values state)) (emptylist)))]
-      [(eq? variable (car (variables state))) (cons (variables state) (cons (cons value (cdr (values state))) (emptylist)))]
+      
+
+      [(and (null? (cdr state)) (null? (currentlayervariables state))) (cons (cons (cons variable (currentlayervariables state)) (cons (cons value (currentlayervalues state)) (emptylist)))(cdr state))]
+      [(null? (currentlayervariables state))(cons (currentlayer state) (add variable value (cdr state)))]; no layer left
+      [(eq? variable (car (currentlayervariables state))) (cons (cons (currentlayervariables state) (cons (cons value (cdr (currentlayervalues state))) (emptylist)))(cdr state))]
       [else (cons
-             (cons (car (variables state)) (variables (add variable value (statecdr state))))
-             (cons (cons (car (values state)) (values (add variable value (statecdr state)))) (emptylist))
+             (cons (car (currentlayervariables state)) (currentlayervariables (add variable value (cdrcurrentlayer state))))
+             (cons (cons (car (currentlayervalues state)) (currentlayervalues (add variable value (cdrcurrentlayer state)))) (emptylist))
              )]
     )))
-
+;***********************MODIFYING FOR LAYER STATE***********
+;********This works for a layered state but could probably use some abstraction***
 ; gets the value of a variable
 (define get
   (lambda (variable state)
     (cond
-      [(null? (variables state)) (error 'notdeclarederror)]
-      [(eq? variable (car (variables state))) (car (values state))]
-      [else (get variable (statecdr state))]
-    )))
-
+      [(and (null? (cdr state)) (null? (currentlayervariables state))) (error 'notassigned)]
+      [(null? (currentlayervariables state)) (get variable (nextlayers state))]
+      [(eq? variable (car (currentlayervariables state))) (car (currentlayervalues state))]
+      [else (get variable (cdrcurrentlayer state))]
+    ))) 
 (define getnoerror
   (lambda (variable state)
     (cond
-      [(eq? (variables state) '()) 'notdeclared]
-      [(eq? variable (car (variables state))) (car (values state))]
-      [else (getnoerror variable (statecdr state))]
+      [(and (null? (cdr state)) (null? (currentlayervariables state))) ('notassigned)]
+      [(null? (variables (currentlayer state))) (getnoerror variable (nextlayers state))]
+      [(eq? variable (car (variables (currentlayer state)))) (car (values (currentlayer state)))]
+      [else (getnoerror variable (cdrcurrentlayer state))]
     )))
 
+(define currentlayer
+  (lambda (state)
+    (car state)))
+
+(define currentlayervariables
+  (lambda (state)
+    (car (car state))))
+
+(define currentlayervalues
+  (lambda (state)
+    (car (cdr (car state)))))
+
+(define cdrcurrentlayer
+  (lambda (state)
+    (cons (list (cdr (currentlayervariables state)) (cdr (currentlayervalues state)))(nextlayers state))))
+
+(define nextlayers
+  (lambda (state)
+    (cdr state)))
+
+
+
 ; changes the state
+
 (define mstate
-  (lambda (lis state)
+  (lambda (lis state) ;;;;Add next, which is a continuation function, ;add break
     (cond
       [(null? lis) state]
       [(atom? lis) state]
@@ -91,11 +120,35 @@ Parker Griffin
       [(eq? (operator lis) 'return) (return lis state)]
       [(eq? (operator lis) 'if) (ifstatement lis state)]
       [(eq? (operator lis) 'while) (whileloop lis state)]
+      [(eq? (operator lis) 'begin) (block lis state)]
+      ;[(eq? (operator lis) 'try do sometihg here)]
       [(equalityoperator? (operator lis)) (mstate (firstexpression lis) (mstate (secondexpression lis) state))]
       [(not (null? (cdr lis))) (mstate (cdr lis) state)] 
       [else state]
     )))
+;---Scoping----------
+;let: x,y,z are only in scope in body
+;let * x is in scope in expression2, expression3, and body
+;---name y is in scope in expresion3 and body
+;---z is in scope in body, expressions are executed in order
+;letrec everything is recursivive 
+(define block
+  (lambda (lis state)
+    state))
 
+(define addstatelayer
+  (lambda (state) state))
+  
+;------TRY CATCH FINALLY---------
+;Semantics of try/catch/finally
+;mstate try <tryblock> catch (<type> <var>) <catcblock> finally <finallyblocl>, state, next, break, throw ...)]
+;modify the break, next, and throw continuations to execute the finally block first and then execture the contituion
+;---newbreak (lambda (s1) (mstate (finally ...) s1, break, break, throw)
+;create a new throw continuation that runs the catch block followed by the finally block if the exception is thrown
+;---finallycont ;= f(s1) --. Mstate(finallyblock, s1, next, break, throw)
+;---mythrow ;= f(e, s1) --> Mstate(<catchblock>, AddBinding(,var>, e, s1), fianlly cont, newbreak, newthrow..)
+;Execute the try block with the new continuations
+;---Mstate(,trybloc>, state, finallycont, newbreak, mythrow, ....)
 (define equalityoperator?
   (lambda (operator)
     (cond
@@ -146,6 +199,7 @@ Parker Griffin
       [else (mstate (elsestatement lis) state)]
     )))
 
+;From Lecture: create helper function called loop, if condition is met, (loop (whileloopbody lis) state (lambda (v) (mstate lis state next)))
 (define whileloop
   (lambda (lis state)
     (cond
@@ -198,6 +252,10 @@ Parker Griffin
 ;###FOR SOME REASON THIS DOESN'T WORK
 (define initialstate
   (lambda ()
+    '((()()))))
+
+(define newlayer
+  (lambda ()
     '(()())))
 
 ;_______STATE CHANGE RELATED FUNCTIONS, like ADD, REMOVE, GET
@@ -227,32 +285,32 @@ Parker Griffin
     (get 'return (mstate (parser filename) (initialstate)))))
 
 ;__________TESTS_____________
-(interpret "test1.txt")
-(interpret "test2.txt")
-(interpret "test3.txt")
-(interpret "test4.txt")
-(interpret "test5.txt")
-(interpret  "test6.txt")
-(interpret  "test7.txt")
-(interpret  "test8.txt")
-(interpret  "test9.txt")
-(interpret  "test10.txt")
+;(interpret "test1.txt")
+;(interpret "test2.txt")
+;(interpret "test3.txt")
+;(interpret "test4.txt")
+;(interpret "test5.txt")
+;(interpret  "test6.txt")
+;(interpret  "test7.txt")
+;(interpret  "test8.txt")
+;(interpret  "test9.txt")
+;(interpret  "test10.txt")
 ;(interpret  "test11.txt")
 ;(interpret  "test12.txt")
 ;(interpret  "test13.txt")
 ;(interpret  "test14.txt")
-(interpret  "test15.txt")
-(interpret  "test16.txt")
-(interpret  "test17.txt")
-(interpret  "test18.txt")
-(interpret  "test19.txt")
-(interpret  "test20.txt")
-
-(interpret "etest21.txt")
-(interpret "etest22.txt")
-(interpret "etest23.txt")
-(interpret "etest24.txt")
-(interpret "etest25.txt")
-(interpret "etest26.txt")
-(interpret "etest27.txt")
-(interpret "etest28.txt")
+;(interpret  "test15.txt")
+;(interpret  "test16.txt")
+;(interpret  "test17.txt")
+;(interpret  "test18.txt")
+;(interpret  "test19.txt")
+;(interpret  "test20.txt")
+;(interpret "etest21.txt")
+;(interpret "etest22.txt")
+;(interpret "etest23.txt")
+;(interpret "etest24.txt")
+;(interpret "etest25.txt")
+;(interpret "etest26.txt")
+;(interpret "etest27.txt")
+;(interpret "etest28.txt")
+(parser "flowtest1.txt")
