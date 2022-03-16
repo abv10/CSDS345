@@ -13,12 +13,12 @@
       [(eq? lis 'false) #f]
       [(and (atom? lis) (eq? (get lis state) 'declared))(error 'notassignederror)]
       [(atom? lis) (get lis state)]
-      [(and (eq? (operator lis) '-)(null? (firstexpressioncdr lis))) (- (mvalue (firstexpression lis) (mstate (firstexpression lis) state)))]
-      [(eq? (operator lis) '*) (* (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) (mstate (firstexpression lis) state)))]
-      [(eq? (operator lis) '+) (+ (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) (mstate (firstexpression lis) state)))]
-      [(eq? (operator lis) '-) (- (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) (mstate (firstexpression lis) state)))]
-      [(eq? (operator lis) '/) (quotient (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) (mstate (firstexpression lis) state)))]
-      [(eq? (operator lis) '%) (modulo (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) (mstate (firstexpression lis) state)))]
+      [(and (eq? (operator lis) '-)(null? (firstexpressioncdr lis))) (- (mvalue (firstexpression lis) state))]
+      [(eq? (operator lis) '*) (* (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state))]
+      [(eq? (operator lis) '+) (+ (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state))]
+      [(eq? (operator lis) '-) (- (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state))]
+      [(eq? (operator lis) '/) (quotient (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state))]
+      [(eq? (operator lis) '%) (modulo (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state))]
       [(eq? (operator lis) '=) (mvalue (secondexpression lis) state)]
       [(eq? (operator lis) '==) (mboolean lis state)]
       [(eq? (operator lis) '!=) (mboolean lis state)]
@@ -63,34 +63,76 @@
 (define addhelper
   (lambda (variable value state declaring)
     (cond
-      [(eq? #t declaring) (currentlayercons variable value state)] ;SINCE WE ALREADY CHECKED TO SEE IF VARIABLE IS DECLARED, WE JUST PUT IT ON THE BEGINING OF THE FIRST LAYER
-      [(and (null? (cdr state)) (null? (currentlayervariables state))) (cons (cons (cons variable (currentlayervariables state)) (cons (cons value (currentlayervalues state)) (emptylist)))(cdr state))]
-      [(null? (currentlayervariables state))(cons (currentlayer state) (addhelper variable value (cdr state) declaring))]
-      [(eq? variable (car (currentlayervariables state))) (cons (cons (currentlayervariables state) (cons (cons value (cdr (currentlayervalues state))) (emptylist)))(cdr state))]
-      [else (currentlayercons (car (currentlayervariables state)) (car (currentlayervalues state))(addhelper variable value (cdrcurrentlayer state) declaring))]
+      [(eq? #t declaring) (addnowcurrentlayer variable value state)] ;SINCE WE ALREADY CHECKED TO SEE IF VARIABLE IS DECLARED, WE JUST PUT IT ON THE BEGINING OF THE FIRST LAYER
+      [(and (nonextlayer? state) (emptycurrentlayer? state)) (addvariabletoempty variable value state) ]
+      [(emptycurrentlayer? state)(cons (currentlayer state) (addhelper variable value (nextlayers state) declaring))]
+      [(rightvariable? variable state)(changevalue variable value state)]
+      [else (addnowcurrentlayer (selectedvariable state) (selectedvalue state) (addhelper variable value (remainderofstate state) declaring))]
     )))
+
+
+
+
+;----------
+;Helpers:
+(define selectedvariable
+  (lambda (state)
+    (car (currentlayervariables state))))
+
+(define selectedvalue
+  (lambda (state)
+    (car (currentlayervalues state))))
+    
+(define changevalue
+  (lambda (variable value state)
+    (cons (cons (currentlayervariables state) (cons (cons value (cdr (currentlayervalues state))) (emptylist)))(nextlayers state))))
+(define rightvariable?
+  (lambda (variable state)
+    (eq? variable (car (currentlayervariables state)))))
+(define nextlayers
+  (lambda (state)
+    (cdr state)))
+(define addvariabletoempty
+  (lambda (variable value state)
+    (cons (cons (cons variable (currentlayervariables state)) (cons (cons value (currentlayervalues state)) (emptylist)))(cdr state))))
+(define nonextlayer?
+  (lambda (state)
+    (null? (cdr state))))
+
+(define emptycurrentlayer?
+  (lambda (state)
+    (null? (currentlayervariables state))))
+;End helpers
+;--------------------
+
+
+
+
+
+
 ;***********************MODIFYING FOR LAYER STATE***********
 ;********This works for a layered state but could probably use some abstraction***
 ; gets the value of a variable
 (define get
   (lambda (variable state)
     (cond
-      [(and (null? (cdr state)) (null? (currentlayervariables state))) (error 'notassigned)]
-      [(null? (currentlayervariables state)) (get variable (nextlayers state))]
-      [(eq? variable (car (currentlayervariables state))) (car (currentlayervalues state))]
-      [else (get variable (cdrcurrentlayer state))]
-    ))) 
+      [(and (nonextlayer? state) (emptycurrentlayer? state)) (error 'notassigned)]
+      [(emptycurrentlayer? state) (get variable (nextlayers state))]
+      [(rightvariable? variable state) (selectedvalue state)]
+      [else (get variable (remainderofstate state))]
+    )))
+
 (define getnoerror
   (lambda (variable state)
     (cond
-      [(and (null? (cdr state)) (null? (currentlayervariables state))) 'notdeclared]
-      [(null? (variables (currentlayer state))) (getnoerror variable (nextlayers state))]
-      [(eq? variable (car (variables (currentlayer state)))) (car (values (currentlayer state)))]
-      [else (getnoerror variable (cdrcurrentlayer state))]
+      [(and (nonextlayer? state) (emptycurrentlayer? state)) 'notdeclared]
+      [(emptycurrentlayer? state) (getnoerror variable (nextlayers state))]
+      [(rightvariable? variable state) (selectedvalue state)]
+      [else (getnoerror variable (remainderofstate state))]
     )))
 
 ;cons c d (((a)(b))((x y)(x z))) --> (((c d) (d b))((x y)(x z))
-(define currentlayercons
+(define addnowcurrentlayer
   (lambda (carvar carval rest)
     (cons (cons (cons carvar (currentlayervariables rest)) (cons (cons carval (currentlayervalues rest))(emptylist))) (cdr rest))))
 (define currentlayer
@@ -105,13 +147,9 @@
   (lambda (state)
     (car (cdr (car state)))))
 
-(define cdrcurrentlayer
+(define remainderofstate
   (lambda (state)
     (cons (list (cdr (currentlayervariables state)) (cdr (currentlayervalues state)))(nextlayers state))))
-
-(define nextlayers
-  (lambda (state)
-    (cdr state)))
 
 
 
@@ -130,7 +168,7 @@
       [(eq? (operator lis) 'while) (whileloop lis state)]
       [(eq? (operator lis) 'begin) (block lis state)]
       ;[(eq? (operator lis) 'try do sometihg here)]
-      [(equalityoperator? (operator lis)) (mstate (firstexpression lis) (mstate (secondexpression lis) state))]
+      ;[(equalityoperator? (operator lis)) (mstate (firstexpression lis) (mstate (secondexpression lis) state))] Don't think we need this since we can't assign in expression
       [(not (null? (cdr lis))) (mstate (cdr lis) state)] 
       [else state]
     )))
@@ -176,18 +214,30 @@
 (define declare
   (lambda (lis state)
     (cond
-      [(not (eq? (getnoerror (firstexpression lis) state) 'notdeclared)) (error 'redeclarederror)] 
-      [(null? (firstexpressioncdr lis))(add (firstexpression lis) 'declared state)]
-      [else  (adddeclare (firstexpression lis) (mvalue (secondexpression lis) (mstate (secondexpression lis) state)) (mstate (secondexpression lis) state))]
+      [(isdeclared lis state) (error 'redeclarederror)] 
+      [(isnovaluetoassign lis)(add (inputvariable lis) 'declared state)]
+      [else  (adddeclare (inputvariable lis) (mvalue (valuetoassign lis) state) state) ]
      )))
 
-; assigns a value to a variable #COULD ADD NESTED ASSIGNMENTS IF WE WANT
 (define assign
   (lambda (lis state)
-    (if (eq? (getnoerror (firstexpression lis) state) 'notdeclared)
+    (if (not (isdeclared lis state))
         (error 'notdeclarederror)
-        (add (firstexpression lis) (mvalue lis state) (mstate (secondexpression lis) state))
+        (add (inputvariable lis) (mvalue (valuetoassign lis) state) state)
     )))
+
+(define valuetoassign
+  (lambda (lis)
+    (caddr lis)))
+(define isnovaluetoassign
+  (lambda (lis)
+    (null? (cddr lis))))
+(define isdeclared
+  (lambda (lis state)
+    (not (eq? (getnoerror (inputvariable lis) state) 'notdeclared))))
+(define inputvariable
+  (lambda (lis)
+    (firstexpression lis)))
 
 ; sets a variable called return in the state
 (define return
@@ -202,8 +252,8 @@
 (define ifstatement
   (lambda (lis state)
     (cond
-      [(mvalue (ifcondition lis) state) (mstate (thenstatement lis) (mstate (ifcondition lis) state))]
-      [(null? (thenstatementcdr lis)) (mstate (ifcondition lis) state)]
+      [(mvalue (ifcondition lis) state) (mstate (thenstatement lis) state)]
+      [(null? (thenstatementcdr lis)) state]
       [else (mstate (elsestatement lis) state)]
     )))
 
@@ -211,8 +261,8 @@
 (define whileloop
   (lambda (lis state)
     (cond
-      [(mvalue (whilecondition lis) state) (whileloop lis (mstate (whileloopbody lis) (mstate (whilecondition lis) state)))]
-      [else (mstate (whilecondition lis) state)]
+      [(mvalue (whilecondition lis) state) (whileloop lis (mstate (whileloopbody lis) state))]
+      [else state]
     )))
 
 (define whilecondition
@@ -293,26 +343,26 @@
     (get 'return (mstate (parser filename) (initialstate)))))
 
 ;__________TESTS_____________
-;(interpret "test1.txt")
-;(interpret "test2.txt")
-;(interpret "test3.txt")
-;(interpret "test4.txt")
-;(interpret "test5.txt")
-;(interpret  "test6.txt")
-;(interpret  "test7.txt")
-;(interpret  "test8.txt")
-;(interpret  "test9.txt")
-;(interpret  "test10.txt")
+(eq? (interpret "test1.txt") 150)
+(eq? (interpret "test2.txt") -4)
+(eq? (interpret "test3.txt") 10)
+(eq? (interpret "test4.txt") 16)
+(eq? (interpret "test5.txt") 220)
+(eq? (interpret  "test6.txt") 5)
+(eq? (interpret  "test7.txt") 6)
+(eq? (interpret  "test8.txt") 10)
+(eq? (interpret  "test9.txt") 5)
+(eq? (interpret  "test10.txt") -39)
 ;(interpret  "test11.txt")
 ;(interpret  "test12.txt")
 ;(interpret  "test13.txt")
 ;(interpret  "test14.txt")
-;(interpret  "test15.txt")
-;(interpret  "test16.txt")
-;(interpret  "test17.txt")
-;(interpret  "test18.txt")
-;(interpret  "test19.txt")
-;(interpret  "test20.txt")
+(eq? (interpret  "test15.txt") 'true)
+(eq? (interpret  "test16.txt") 100)
+(eq? (interpret  "test17.txt") 'false)
+(eq? (interpret  "test18.txt") 'true)
+(eq? (interpret  "test19.txt") 128)
+(eq? (interpret  "test20.txt") 12)
 ;(interpret "etest21.txt")
 ;(interpret "etest22.txt")
 ;(interpret "etest23.txt")
