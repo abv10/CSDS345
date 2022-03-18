@@ -156,20 +156,20 @@
 ; changes the state
 
 (define mstate
-  (lambda (lis state) ;;;;Add next, which is a continuation function, ;add break
+  (lambda (lis state next break continue return) ;;;;Add next, which is a continuation function, ;add break
     (cond
       [(null? lis) state]
       [(atom? lis) state]
-      [(list? (operator lis)) (mstate (cdr lis) (mstate (operator lis) state))]
-      [(eq? (operator lis) 'var) (declare lis state)]
-      [(eq? (operator lis) '=) (assign lis state)]
-      [(eq? (operator lis) 'return) (return lis state)]
-      [(eq? (operator lis) 'if) (ifstatement lis state)]
-      [(eq? (operator lis) 'while) (whileloop lis state)]
-      [(eq? (operator lis) 'begin) (block lis state)]
+      [(list? (operator lis)) (mstate (cdr lis) (mstate (operator lis) state next break continue return) next break continue return)] ;NEED TO CHANGE THIS
+      [(eq? (operator lis) 'var) (declare lis state next break continue return)]
+      [(eq? (operator lis) '=) (assign lis state next break continue return)]
+      [(eq? (operator lis) 'return) (return lis state next break continue return)]
+      [(eq? (operator lis) 'if) (ifstatement lis state next break continue return)]
+      [(eq? (operator lis) 'while) (whileloop lis state next break continue return)]
+      [(eq? (operator lis) 'begin) (block lis state next break continue return)]
       ;[(eq? (operator lis) 'try do sometihg here)]
       ;[(equalityoperator? (operator lis)) (mstate (firstexpression lis) (mstate (secondexpression lis) state))] Don't think we need this since we can't assign in expression
-      [(not (null? (cdr lis))) (mstate (cdr lis) state)] 
+      [(not (null? (cdr lis))) (mstate (cdr lis) state next break continue return)] 
       [else state]
     )))
 ;---Scoping----------
@@ -179,22 +179,22 @@
 ;---z is in scope in body, expressions are executed in order
 ;letrec everything is recursivive 
 (define block
-  (lambda (lis state)
+  (lambda (lis state next break continue return)
     state))
 
 (define addstatelayer
   (lambda (state) state))
   
-;------TRY CATCH FINALLY---------
-;Semantics of try/catch/finally
-;mstate try <tryblock> catch (<type> <var>) <catcblock> finally <finallyblocl>, state, next, break, throw ...)]
-;modify the break, next, and throw continuations to execute the finally block first and then execture the contituion
-;---newbreak (lambda (s1) (mstate (finally ...) s1, break, break, throw)
-;create a new throw continuation that runs the catch block followed by the finally block if the exception is thrown
-;---finallycont ;= f(s1) --. Mstate(finallyblock, s1, next, break, throw)
+;------TRY CATCH return---------
+;Semantics of try/catch/return
+;mstate try <tryblock> catch (<type> <var>) <catcblock> return <returnblocl>, state, next, break, throw ...)]
+;modify the break, next, and throw continuations to execute the return block first and then execture the contituion
+;---newbreak (lambda (s1) (mstate (return ...) s1, break, break, throw)
+;create a new throw continuation that runs the catch block followed by the return block if the exception is thrown
+;---returncont ;= f(s1) --. Mstate(returnblock, s1, next, break, throw)
 ;---mythrow ;= f(e, s1) --> Mstate(<catchblock>, AddBinding(,var>, e, s1), fianlly cont, newbreak, newthrow..)
 ;Execute the try block with the new continuations
-;---Mstate(,trybloc>, state, finallycont, newbreak, mythrow, ....)
+;---Mstate(,trybloc>, state, returncont, newbreak, mythrow, ....)
 (define equalityoperator?
   (lambda (operator)
     (cond
@@ -212,7 +212,7 @@
 
 ; declares a variable. Format: (declare '(var x 5) state)
 (define declare
-  (lambda (lis state)
+  (lambda (lis state next break continue return)
     (cond
       [(isdeclared lis state) (error 'redeclarederror)] 
       [(isnovaluetoassign lis)(add (inputvariable lis) 'declared state)]
@@ -220,7 +220,7 @@
      )))
 
 (define assign
-  (lambda (lis state)
+  (lambda (lis state next break continue return)
     (if (not (isdeclared lis state))
         (error 'notdeclarederror)
         (add (inputvariable lis) (mvalue (valuetoassign lis) state) state)
@@ -241,7 +241,7 @@
 
 ; sets a variable called return in the state
 (define return
-  (lambda (lis state)
+  (lambda (lis state next break continue return)
     (cond
       [(eq? (mvalue lis state) #t) (add 'return 'true state)]
       [(eq? (mvalue lis state) #f) (add 'return 'false state)]
@@ -250,21 +250,35 @@
 
 ; executes an if statement
 (define ifstatement
-  (lambda (lis state)
+  (lambda (lis state next break continue return)
     (cond
-      [(mvalue (ifcondition lis) state) (mstate (thenstatement lis) state)]
+      [(mvalue (ifcondition lis) state) (mstate (thenstatement lis) state next break continue return)]
       [(null? (thenstatementcdr lis)) state]
-      [else (mstate (elsestatement lis) state)]
+      [else (mstate (elsestatement lis) state next break continue return)]
     )))
 
 ;From Lecture: create helper function called loop, if condition is met, (loop (whileloopbody lis) state (lambda (v) (mstate lis state next)))
-(define whileloop
-  (lambda (lis state)
+(define whilelooptwo ;TEMPORARILTY RENAMED
+  (lambda (lis state next break continue return)
     (cond
-      [(mvalue (whilecondition lis) state) (whileloop lis (mstate (whileloopbody lis) state))]
+      [(mvalue (whilecondition lis) state) (whileloop lis (mstate (whileloopbody lis) state next break continue return) next break continue return)]
       [else state]
     )))
 
+(define whileloop
+  (lambda (lis state next break continue return)
+    (loop (whilecondition lis) (whileloopbody lis) state next (lambda (s) (next s)) continue return)))
+
+(define loop 
+  (lambda (condition body state next break continue return)
+    (cond
+      ((mboolean condition state) (mstate body state (lambda (s) (loop condition body s next break continue return)) break continue return))
+      (else (next state)))))
+
+;ATTEMPT FOR TRY CATCH
+(define trycatch
+  (lambda (lis state next break
+    
 (define whilecondition
   (lambda (lis)
     (cadr lis)))
@@ -340,29 +354,31 @@
 ;_______The ENTRY POINT TO INTERPRETING THE PROGRAM________
 (define interpret
   (lambda (filename)
-    (get 'return (mstate (parser filename) (initialstate)))))
+    (get 'return (mstate (parser filename) (initialstate) (lambda (s) s) 'break 'continue 'return))))
 
 ;__________TESTS_____________
-(eq? (interpret "test1.txt") 150)
-(eq? (interpret "test2.txt") -4)
-(eq? (interpret "test3.txt") 10)
-(eq? (interpret "test4.txt") 16)
-(eq? (interpret "test5.txt") 220)
-(eq? (interpret  "test6.txt") 5)
-(eq? (interpret  "test7.txt") 6)
-(eq? (interpret  "test8.txt") 10)
-(eq? (interpret  "test9.txt") 5)
-(eq? (interpret  "test10.txt") -39)
+;(eq? (interpret "test1.txt") 150)
+;(eq? (interpret "test2.txt") -4)
+;(eq? (interpret "test3.txt") 10)
+;(eq? (interpret "test4.txt") 16)
+;(eq? (interpret "test5.txt") 220)
+;(eq? (interpret  "test6.txt") 5)
+;(eq? (interpret  "test7.txt") 6)
+;(eq? (interpret  "test8.txt") 10)
+;(eq? (interpret  "test9.txt") 5)
+;(eq? (interpret  "test10.txt") -39)
 ;(interpret  "test11.txt")
 ;(interpret  "test12.txt")
 ;(interpret  "test13.txt")
 ;(interpret  "test14.txt")
-(eq? (interpret  "test15.txt") 'true)
-(eq? (interpret  "test16.txt") 100)
-(eq? (interpret  "test17.txt") 'false)
-(eq? (interpret  "test18.txt") 'true)
-(eq? (interpret  "test19.txt") 128)
-(eq? (interpret  "test20.txt") 12)
+;(eq? (interpret  "test15.txt") 'true)
+;(eq? (interpret  "test16.txt") 100);
+;(eq? (interpret  "test17.txt") 'false)
+;(eq? (interpret  "test18.txt") 'true)
+;(eq? (interpret  "test19.txt") 128)
+;(eq? (interpret  "test20.txt") 12)
+(interpret  "test19.txt")
+(interpret  "test20.txt")
 ;(interpret "etest21.txt")
 ;(interpret "etest22.txt")
 ;(interpret "etest23.txt")
