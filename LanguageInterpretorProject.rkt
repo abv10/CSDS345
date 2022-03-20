@@ -29,7 +29,8 @@
       [(eq? (operator lis) '!) (mboolean lis state)]
       [(eq? (operator lis) '||) (mboolean lis state)]
       [(eq? (operator lis) '&&) (mboolean lis state)]
-      [(eq? (operator lis) 'return) (mvalue (firstexpression lis) state)] ; not sure if this is the right place for it
+      [(null? (cdr lis)) (mvalue (operator lis) state)]
+      ;[(eq? (operator lis) 'return) (mvalue (firstexpression lis) state)] ; not sure if this is the right place for it
       )))
 
 ; evaluates boolean expressions. I think it will only be called by mvalue
@@ -164,7 +165,7 @@
       [(list? (operator lis)) (mstate (operator lis) state (lambda (s) (mstate (cdr lis) s next break continue return throw)) break continue return throw)]
       [(eq? (operator lis) 'var) (next (declare lis state next break continue return throw))]
       [(eq? (operator lis) '=) (next (assign lis state next break continue return throw))]
-      [(eq? (operator lis) 'return) (returnfunction lis state)]
+      [(eq? (operator lis) 'return) (returnfunction lis state next break continue return throw)]
       [(eq? (operator lis) 'if) (next (ifstatement lis state next break continue return throw))]
       [(eq? (operator lis) 'while) (whilelooptwo lis state next (lambda (v) (next (nextlayers v))) continue return throw)]
       [(eq? (operator lis) 'break) (break state)]
@@ -247,13 +248,13 @@
   (lambda (lis)
     (firstexpression lis)))
 
-; sets a variable called return in the state
+; uses the return continuation to stop code execution
 (define returnfunction
-  (lambda (lis state)
+  (lambda (lis state next break continue return throw)
     (cond
-      [(eq? (mvalue lis state) #t) (add 'return 'true state)]
-      [(eq? (mvalue lis state) #f) (add 'return 'false state)]
-      [else (add 'return (mvalue lis state) state)]
+      [(eq? (mvalue (cdr lis) state) #t) (add 'return 'true state)]
+      [(eq? (mvalue (cdr lis) state) #f) (add 'return 'false state)]
+      [else (mstate (cdr lis) state (lambda (v) (add 'return (mvalue (cdr lis) v) v)) break continue return throw)]
     )))
 
 ; executes an if statement
@@ -270,9 +271,8 @@
   (lambda (lis state next break continue return throw)
     (cond
       ((null? lis) state)
-      ((mboolean (firstexpression lis) state) (mstate (firstexpression lis) state (lambda (v1)
-                                                                             (mstate (secondexpression lis) v1 (lambda (v2) (mstate lis v2 next break continue return throw)) break continue return throw)) break continue return throw))
-      (else (mstate (firstexpression lis) state next break continue return throw)))))
+      ((mboolean (whilecondition lis) state) (mstate (whileloopbody lis) state (lambda (v) (mstate lis v next break continue return throw)) break continue return throw))
+      (else (mstate (whilecondition lis) state next break continue return throw)))))
 
 (define whileloop
   (lambda (lis state next break continue return throw)
@@ -421,10 +421,10 @@
 (eq? (interpret  "test18.txt") 'true)
 (eq? (interpret  "test19.txt") 128)
 (eq? (interpret  "test20.txt") 12)
-(eq? (interpret "flowtest8.txt") 21)
-(eq? (interpret "flowtest9.txt") 21)
+(eq? (interpret "flowtest8.txt") 6)
+(eq? (interpret "flowtest9.txt") -1)
 ;(interpret "flowtest8.txt")
-(interpret "flowtest9.txt")
+;(interpret "flowtest9.txt")
 ;(interpret  "test19.txt")
 ;(interpret  "test20.txt")
 ;(interpret "etest21.txt")
