@@ -165,8 +165,8 @@
       [(atom? lis) (next state)]
       ;[(list? (operator lis)) (mstate (cdr lis) (mstate (operator lis) state next break continue return throw) next break continue return throw)] ;NEED TO CHANGE THIS
       [(list? (operator lis)) (mstate (operator lis) state (lambda (s) (mstate (cdr lis) s next break continue return throw)) break continue return throw)]
-      [(eq? (operator lis) 'var) (next (declare lis state next break continue return throw))]
-      [(eq? (operator lis) '=) (next (assign lis state next break continue return throw))]
+      [(eq? (operator lis) 'var) (declare lis state next break continue return throw)]
+      [(eq? (operator lis) '=) (assign lis state next break continue return throw)]
       [(eq? (operator lis) 'return) (returnfunction lis state next break continue return throw)]
       [(eq? (operator lis) 'if) (ifstatement lis state next break continue return throw)]
       [(eq? (operator lis) 'while) (whilelooptwo lis state next (lambda (v) (next (nextlayers v))) continue return throw)]
@@ -226,15 +226,15 @@
   (lambda (lis state next break continue return throw)
     (cond
       [(isdeclared lis state) (error 'redeclarederror)] 
-      [(isnovaluetoassign lis)(add (inputvariable lis) 'declared state)]
-      [else  (adddeclare (inputvariable lis) (mvalue (valuetoassign lis) state) state) ]
+      [(isnovaluetoassign lis)(next (add (inputvariable lis) 'declared state))]
+      [else (next (adddeclare (inputvariable lis) (mvalue (valuetoassign lis) state) state)) ]
      )))
 
 (define assign
   (lambda (lis state next break continue return throw)
     (if (not (isdeclared lis state))
         (error 'notdeclarederror)
-        (add (inputvariable lis) (mvalue (valuetoassign lis) state) state)
+        (next (add (inputvariable lis) (mvalue (valuetoassign lis) state) state))
     )))
 
 (define valuetoassign
@@ -422,22 +422,6 @@
 (eq? (interpret  "test18.txt") 'true)
 (eq? (interpret  "test19.txt") 128)
 (eq? (interpret  "test20.txt") 12)
-(eq? (interpret "flowtest8.txt") 6)
-(eq? (interpret "flowtest9.txt") -1)
-;(interpret "flowtest8.txt")
-;(interpret "flowtest9.txt")
-;(interpret  "test19.txt")
-;(interpret  "test20.txt")
-;(interpret "etest21.txt")
-;(interpret "etest22.txt")
-;(interpret "etest23.txt")
-;(interpret "etest24.txt")
-;(interpret "etest25.txt")
-;(interpret "etest26.txt")
-;(interpret "etest27.txt")
-;(interpret "etest28.txt")
-;(parser "flowtest1.txt")
-;(parser "flowtest16.txt")
 (eq? (interpret "flowtest1.txt") 20)
 (eq? (interpret "flowtest2.txt") 164)
 (eq? (interpret "flowtest3.txt") 32)
@@ -450,14 +434,14 @@
 (eq? (interpret "flowtest9.txt") -1)
 (eq? (interpret "flowtest10.txt") 789)
 
-;(interpret "flowtest11.txt")
-;(interpret "flowtest12.txt")
-;(interpret "flowtest13.txt")
+;(eq? (interpret "flowtest11.txt") 'error)
+;(interpret "flowtest12.txt") error
+;(interpret "flowtest13.txt") error
 (eq? (interpret "flowtest14.txt") 12)
 ;(parser "flowtest10.txt")
-(interpret "flowtest15.txt")
+(eq? (interpret "flowtest15.txt") 125)
 
-(interpret "flowtest16.txt")
+(eq? (interpret "flowtest16.txt") 110)
 ;(interpret "flowtest17.txt")
-;(interpret "flowtest18.txt")
+(eq? (interpret "flowtest18.txt") 101)
 ;(interpret "flowtest19.txt")
