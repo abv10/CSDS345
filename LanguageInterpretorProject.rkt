@@ -166,7 +166,7 @@
       [(eq? (operator lis) 'var) (next (declare lis state next break continue return throw))]
       [(eq? (operator lis) '=) (next (assign lis state next break continue return throw))]
       [(eq? (operator lis) 'return) (returnfunction lis state next break continue return throw)]
-      [(eq? (operator lis) 'if) (next (ifstatement lis state next break continue return throw))]
+      [(eq? (operator lis) 'if) (ifstatement lis state next break continue return throw)]
       [(eq? (operator lis) 'while) (whilelooptwo lis state next (lambda (v) (next (nextlayers v))) continue return throw)]
       [(eq? (operator lis) 'break) (break state)]
       [(eq? (operator lis) 'continue) (continue state)]
@@ -262,7 +262,7 @@
   (lambda (lis state next break continue return throw)
     (cond
       [(mvalue (ifcondition lis) state) (mstate (thenstatement lis) state next break continue return throw)]
-      [(null? (thenstatementcdr lis)) state]
+      [(null? (thenstatementcdr lis)) (next state)]
       [else (mstate (elsestatement lis) state next break continue return throw)]
     )))
 
@@ -315,7 +315,6 @@
                                                                       (lambda (s2) (throw s2 e1))
                                                                       (lambda (v) (throw s1 e1))
                                                                       throw)))))))
-
 
 
                                               
@@ -436,25 +435,25 @@
 ;(interpret "etest27.txt")
 ;(interpret "etest28.txt")
 ;(parser "flowtest1.txt")
-(parser "flowtest16.txt")
-;(interpret "flowtest1.txt")
-;(interpret "flowtest2.txt")
-;(interpret "flowtest3.txt")
-;(interpret "flowtest4.txt")
-;(interpret "flowtest5.txt")
+;(parser "flowtest16.txt")
+(eq? (interpret "flowtest1.txt") 20)
+(eq? (interpret "flowtest2.txt") 164)
+(eq? (interpret "flowtest3.txt") 32)
+(eq? (interpret "flowtest4.txt") 2)
+;(interpret "flowtest5.txt") ;error
 
-;(interpret "flowtest6.txt")
-;(interpret "flowtest7.txt")
-;(interpret "flowtest8.txt")
-;(interpret "flowtest9.txt")
-;(interpret "flowtest10.txt")
+(eq? (interpret "flowtest6.txt") 25)
+(eq? (interpret "flowtest7.txt") 21)
+(eq? (interpret "flowtest8.txt") 6)
+(eq? (interpret "flowtest9.txt") -1)
+(eq? (interpret "flowtest10.txt") 789)
 
 ;(interpret "flowtest11.txt")
 ;(interpret "flowtest12.txt")
 ;(interpret "flowtest13.txt")
 ;(interpret "flowtest14.txt")
-(parser "flowtest15.txt")
-;(interpret "flowtest15.txt")
+;(parser "flowtest10.txt")
+(interpret "flowtest15.txt")
 
 (interpret "flowtest16.txt")
 ;(interpret "flowtest17.txt")
