@@ -164,10 +164,12 @@
       [(list? (operator lis)) (mstate (operator lis) state (lambda (s) (mstate (cdr lis) s next break continue return throw)) break continue return throw)]
       [(eq? (operator lis) 'var) (next (declare lis state next break continue return throw))]
       [(eq? (operator lis) '=) (next (assign lis state next break continue return throw))]
-      [(eq? (operator lis) 'return) (return lis state)]
+      [(eq? (operator lis) 'return) (returnfunction lis state)]
       [(eq? (operator lis) 'if) (next (ifstatement lis state next break continue return throw))]
-      [(eq? (operator lis) 'while) (next (whileloop lis state next break continue return throw))]
-      [(eq? (operator lis) 'begin) (next (block lis state next break continue return throw))]
+      [(eq? (operator lis) 'while) (whilelooptwo lis state next (lambda (v) (next (nextlayers v))) continue return throw)]
+      [(eq? (operator lis) 'break) (break state)]
+      [(eq? (operator lis) 'continue) (continue state)]
+      [(eq? (operator lis) 'begin) (block lis (addstatelayer state) next break continue return throw)]
       [(eq? (operator lis) 'throw) (throw state (firstexpression lis))]
       [(eq? (operator lis) 'try) (trycatch lis state next break continue return throw)]
       ;[(equalityoperator? (operator lis)) (mstate (firstexpression lis) (mstate (secondexpression lis) state))] Don't think we need this since we can't assign in expression
@@ -182,10 +184,14 @@
 ;letrec everything is recursivive 
 (define block
   (lambda (lis state next break continue return throw)
-    state))
+    (cond
+      [(null? lis) (next (nextlayers state))]
+      [else (mstate (operator lis) state (lambda (v) (block (cdr lis) v next break continue return throw)) break (lambda (v) (next v)) return throw)]
+      )))
 
 (define addstatelayer
-  (lambda (state) state))
+  (lambda (state)
+    (cons (newlayer) state)))
   
 ;------TRY CATCH return---------
 ;Semantics of try/catch/return
@@ -242,7 +248,7 @@
     (firstexpression lis)))
 
 ; sets a variable called return in the state
-(define return
+(define returnfunction
   (lambda (lis state)
     (cond
       [(eq? (mvalue lis state) #t) (add 'return 'true state)]
@@ -265,7 +271,7 @@
     (cond
       ((null? lis) state)
       ((mboolean (firstexpression lis) state) (mstate (firstexpression lis) state (lambda (v1)
-                                                                             (mstate (secondexpression lis) v1 (lambda (v2)(mstate lis v2 next break continue return throw)) break continue return throw)) break continue return throw))
+                                                                             (mstate (secondexpression lis) v1 (lambda (v2) (mstate lis v2 next break continue return throw)) break continue return throw)) break continue return throw))
       (else (mstate (firstexpression lis) state next break continue return throw)))))
 
 (define whileloop
@@ -392,7 +398,7 @@
 ;_______The ENTRY POINT TO INTERPRETING THE PROGRAM________
 (define interpret
   (lambda (filename)
-    (get 'return (mstate (parser filename) (initialstate) (lambda (s) s) 'break 'continue (lambda (l s) (return l s)) (lambda (l s) (return l s))))))
+    (get 'return (mstate (parser filename) (initialstate) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (s) s)))))
 
 ;__________TESTS_____________
 (eq? (interpret "test1.txt") 150)
@@ -415,9 +421,12 @@
 (eq? (interpret  "test18.txt") 'true)
 (eq? (interpret  "test19.txt") 128)
 (eq? (interpret  "test20.txt") 12)
-
-(interpret  "test19.txt")
-(interpret  "test20.txt")
+(eq? (interpret "flowtest8.txt") 21)
+(eq? (interpret "flowtest9.txt") 21)
+;(interpret "flowtest8.txt")
+(interpret "flowtest9.txt")
+;(interpret  "test19.txt")
+;(interpret  "test20.txt")
 ;(interpret "etest21.txt")
 ;(interpret "etest22.txt")
 ;(interpret "etest23.txt")
