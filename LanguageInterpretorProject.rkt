@@ -160,19 +160,19 @@
     (cond
       [(null? lis) (next state)]
       [(atom? lis) (next state)]
-      [(list? (operator lis)) (mstate (cdr lis) (mstate (operator lis) state next break continue return throw) next break continue return throw)] ;NEED TO CHANGE THIS
-      ;[(list? (operator lis)) (mstate (operator lis) state (lambda (s) (mstate (cdr lis) s next break continue return throw)) break continue return throw)]
-      [(eq? (operator lis) 'var) (declare lis state next break continue return throw)]
-      [(eq? (operator lis) '=) (assign lis state next break continue return throw)]
+      ;[(list? (operator lis)) (mstate (cdr lis) (mstate (operator lis) state next break continue return throw) next break continue return throw)] ;NEED TO CHANGE THIS
+      [(list? (operator lis)) (mstate (operator lis) state (lambda (s) (mstate (cdr lis) s next break continue return throw)) break continue return throw)]
+      [(eq? (operator lis) 'var) (next (declare lis state next break continue return throw))]
+      [(eq? (operator lis) '=) (next (assign lis state next break continue return throw))]
       [(eq? (operator lis) 'return) (return lis state)]
-      [(eq? (operator lis) 'if) (ifstatement lis state next break continue return throw)]
-      [(eq? (operator lis) 'while) (whileloop lis state next break continue return throw)]
-      [(eq? (operator lis) 'begin) (block lis state next break continue return throw)]
+      [(eq? (operator lis) 'if) (next (ifstatement lis state next break continue return throw))]
+      [(eq? (operator lis) 'while) (next (whileloop lis state next break continue return throw))]
+      [(eq? (operator lis) 'begin) (next (block lis state next break continue return throw))]
       [(eq? (operator lis) 'throw) (throw state (firstexpression lis))]
       [(eq? (operator lis) 'try) (trycatch lis state next break continue return throw)]
       ;[(equalityoperator? (operator lis)) (mstate (firstexpression lis) (mstate (secondexpression lis) state))] Don't think we need this since we can't assign in expression
       [(not (null? (cdr lis))) (mstate (cdr lis) state next break continue return throw)] 
-      [else state]
+      [else (next state)]
     )))
 ;---Scoping----------
 ;let: x,y,z are only in scope in body
