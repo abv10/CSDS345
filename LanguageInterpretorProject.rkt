@@ -39,6 +39,8 @@
   (lambda (lis state)
     (cond
       [(number? lis) lis]
+      [(eq? lis 'true) #t]
+      [(eq? lis 'false) #f]
       [(atom? lis) (get lis state)]
       [(eq? (operator lis) '==) (eq? (mvalue (firstexpression lis) state ) (mvalue (secondexpression lis) state))]
       [(eq? (operator lis) '!=) (not (eq? (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state)))]
@@ -451,7 +453,7 @@
 ;(interpret "flowtest11.txt")
 ;(interpret "flowtest12.txt")
 ;(interpret "flowtest13.txt")
-;(interpret "flowtest14.txt")
+(eq? (interpret "flowtest14.txt") 12)
 ;(parser "flowtest10.txt")
 (interpret "flowtest15.txt")
 
