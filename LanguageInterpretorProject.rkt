@@ -158,16 +158,18 @@
 (define mstate
   (lambda (lis state next break continue return throw) ;;;;Add next, which is a continuation function, ;add break
     (cond
-      [(null? lis) state]
-      [(atom? lis) state]
+      [(null? lis) (next state)]
+      [(atom? lis) (next state)]
       [(list? (operator lis)) (mstate (cdr lis) (mstate (operator lis) state next break continue return throw) next break continue return throw)] ;NEED TO CHANGE THIS
+      ;[(list? (operator lis)) (mstate (operator lis) state (lambda (s) (mstate (cdr lis) s next break continue return throw)) break continue return throw)]
       [(eq? (operator lis) 'var) (declare lis state next break continue return throw)]
       [(eq? (operator lis) '=) (assign lis state next break continue return throw)]
       [(eq? (operator lis) 'return) (return lis state)]
       [(eq? (operator lis) 'if) (ifstatement lis state next break continue return throw)]
       [(eq? (operator lis) 'while) (whileloop lis state next break continue return throw)]
       [(eq? (operator lis) 'begin) (block lis state next break continue return throw)]
-      ;[(eq? (operator lis) 'try do sometihg here)]
+      [(eq? (operator lis) 'throw) (throw state (firstexpression lis))]
+      [(eq? (operator lis) 'try) (trycatch lis state next break continue return throw)]
       ;[(equalityoperator? (operator lis)) (mstate (firstexpression lis) (mstate (secondexpression lis) state))] Don't think we need this since we can't assign in expression
       [(not (null? (cdr lis))) (mstate (cdr lis) state next break continue return throw)] 
       [else state]
@@ -261,9 +263,10 @@
 (define whilelooptwo ;TEMPORARILTY RENAMED
   (lambda (lis state next break continue return throw)
     (cond
-      [(mvalue (whilecondition lis) state) (whileloop lis (mstate (whileloopbody lis) state next break continue return throw) next break continue return throw)]
-      [else state]
-    )))
+      ((null? lis) state)
+      ((mboolean (firstexpression lis) state) (mstate (firstexpression lis) state (lambda (v1)
+                                                                             (mstate (secondexpression lis) v1 (lambda (v2)(mstate lis v2 next break continue return throw)) break continue return throw)) break continue return throw))
+      (else (mstate (firstexpression lis) state next break continue return throw)))))
 
 (define whileloop
   (lambda (lis state next break continue return throw)
@@ -272,7 +275,7 @@
 (define loop 
   (lambda (condition body state next break continue return throw)
     (cond
-      ((mboolean condition state) (mstate body state (lambda (s) (loop condition body s next break continue return throw)) break continue return throw))
+      ((mboolean condition state) (mstate body state (lambda (s) (next (loop condition body s next break continue return throw))) break continue return throw))
       (else (next state)))))
 
 ;---------------------------HELPERS FOR WHILE----------------
@@ -291,14 +294,14 @@
 (define trycatch
   (lambda (lis state next break continue return throw)
       (mstate (trybody lis) state
-                       (lambda (s) (mstate (finallybody lis)) s next break continue return throw) ;newnext
-                       (lambda (s) (mstate (finallybody lis)) s break break continue return throw);newbreak
-                       (lambda (s) (mstate (finallybody lis)) s continue break 'continue? return throw);newcontinue
+                       (lambda (s) (mstate (finallybody lis) s next break continue return throw)) ;newnext
+                       (lambda (s) (mstate (finallybody lis) s break break continue return throw));newbreak
+                       (lambda (s) (mstate (finallybody lis) s continue break 'continue? return throw));newcontinue
                        (lambda (v) (return v state));newreturn ??NOT SURE ABOUT THIS ONE
-                       (lambda (s e) (mstate (catch lis) (add 'e e state)
-                                              (lambda (s) (mstate (finallybody lis)) s next break continue return throw) ;new next
-                                              (lambda (s) (mstate (finallybody lis)) s break break continue return throw);newbreak
-                                              (lambda (s) (mstate (finallybody lis)) s continue break 'continue? return throw);newcontinue
+                       (lambda (s e) (mstate (catch lis) (add 'e e state) ; mythrow
+                                              (lambda (s) (mstate (finallybody lis) s next break continue return throw)) ;new next
+                                              (lambda (s) (mstate (finallybody lis) s break break continue return throw));newbreak
+                                              (lambda (s) (mstate (finallybody lis) s continue break 'continue? return throw));newcontinue
                                               (lambda (v) (return v state));newreturn ??NOT SURE ABOUT THIS ONE
                                               (lambda (s1 e1) (mstate (finallybody lis) s1
                                                                       (lambda (s2) (throw s2 e1))
@@ -306,6 +309,7 @@
                                                                       (lambda (s2) (throw s2 e1))
                                                                       (lambda (v) (throw s1 e1))
                                                                       throw)))))))
+
 
 
                                               
@@ -388,29 +392,30 @@
 ;_______The ENTRY POINT TO INTERPRETING THE PROGRAM________
 (define interpret
   (lambda (filename)
-    (get 'return (mstate (parser filename) (initialstate) (lambda (s) s) 'break 'continue (lambda (l s) (return l s))))))
+    (get 'return (mstate (parser filename) (initialstate) (lambda (s) s) 'break 'continue (lambda (l s) (return l s)) (lambda (l s) (return l s))))))
 
 ;__________TESTS_____________
-;(eq? (interpret "test1.txt") 150)
-;(eq? (interpret "test2.txt") -4)
-;(eq? (interpret "test3.txt") 10)
-;(eq? (interpret "test4.txt") 16)
-;(eq? (interpret "test5.txt") 220)
-;(eq? (interpret  "test6.txt") 5)
-;(eq? (interpret  "test7.txt") 6)
-;(eq? (interpret  "test8.txt") 10)
-;(eq? (interpret  "test9.txt") 5)
-;(eq? (interpret  "test10.txt") -39)
+(eq? (interpret "test1.txt") 150)
+(eq? (interpret "test2.txt") -4)
+(eq? (interpret "test3.txt") 10)
+(eq? (interpret "test4.txt") 16)
+(eq? (interpret "test5.txt") 220)
+(eq? (interpret  "test6.txt") 5)
+(eq? (interpret  "test7.txt") 6)
+(eq? (interpret  "test8.txt") 10)
+(eq? (interpret  "test9.txt") 5)
+(eq? (interpret  "test10.txt") -39)
 ;(interpret  "test11.txt")
 ;(interpret  "test12.txt")
 ;(interpret  "test13.txt")
 ;(interpret  "test14.txt")
-;(eq? (interpret  "test15.txt") 'true)
-;(eq? (interpret  "test16.txt") 100);
-;(eq? (interpret  "test17.txt") 'false)
-;(eq? (interpret  "test18.txt") 'true)
-;(eq? (interpret  "test19.txt") 128)
-;(eq? (interpret  "test20.txt") 12)
+(eq? (interpret  "test15.txt") 'true)
+(eq? (interpret  "test16.txt") 100);
+(eq? (interpret  "test17.txt") 'false)
+(eq? (interpret  "test18.txt") 'true)
+(eq? (interpret  "test19.txt") 128)
+(eq? (interpret  "test20.txt") 12)
+
 (interpret  "test19.txt")
 (interpret  "test20.txt")
 ;(interpret "etest21.txt")
@@ -421,5 +426,28 @@
 ;(interpret "etest26.txt")
 ;(interpret "etest27.txt")
 ;(interpret "etest28.txt")
-(parser "flowtest1.txt")
+;(parser "flowtest1.txt")
 (parser "flowtest16.txt")
+;(interpret "flowtest1.txt")
+;(interpret "flowtest2.txt")
+;(interpret "flowtest3.txt")
+;(interpret "flowtest4.txt")
+;(interpret "flowtest5.txt")
+
+;(interpret "flowtest6.txt")
+;(interpret "flowtest7.txt")
+;(interpret "flowtest8.txt")
+;(interpret "flowtest9.txt")
+;(interpret "flowtest10.txt")
+
+;(interpret "flowtest11.txt")
+;(interpret "flowtest12.txt")
+;(interpret "flowtest13.txt")
+;(interpret "flowtest14.txt")
+(parser "flowtest15.txt")
+;(interpret "flowtest15.txt")
+
+(interpret "flowtest16.txt")
+;(interpret "flowtest17.txt")
+;(interpret "flowtest18.txt")
+;(interpret "flowtest19.txt")
