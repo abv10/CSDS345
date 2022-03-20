@@ -173,7 +173,8 @@
       [(eq? (operator lis) 'break) (break state)]
       [(eq? (operator lis) 'continue) (continue state)]
       [(eq? (operator lis) 'begin) (block lis (addstatelayer state) next break continue return throw)]
-      [(eq? (operator lis) 'throw) (throw state (firstexpression lis))]
+      [(and (eq? (operator lis) 'throw) (eq? throw 'throw)) (error 'uncaughtthrow)]
+      [(eq? (operator lis) 'throw) (throw state (mvalue (firstexpression lis) state))]
       [(eq? (operator lis) 'try) (trycatch lis state next break continue return throw)]
       ;[(equalityoperator? (operator lis)) (mstate (firstexpression lis) (mstate (secondexpression lis) state))] Don't think we need this since we can't assign in expression
       [(not (null? (cdr lis))) (mstate (cdr lis) state next break continue return throw)] 
@@ -306,7 +307,7 @@
                        (lambda (s) (mstate (finallybody lis) s break break continue return throw));newbreak
                        (lambda (s) (mstate (finallybody lis) s continue break 'continue? return throw));newcontinue
                        (lambda (v) (return v state));newreturn ??NOT SURE ABOUT THIS ONE
-                       (lambda (s e) (mstate (catch lis) (add (catchvariable lis) e state) ; mythrow
+                       (lambda (s e) (mstate (catch lis) (add (catchvariable lis) e s) ; mythrow
                                               (lambda (s) (mstate (finallybody lis) s next break continue return throw)) ;new next
                                               (lambda (s) (mstate (finallybody lis) s break break continue return throw));newbreak
                                               (lambda (s) (mstate (finallybody lis) s continue break 'continue? return throw));newcontinue
@@ -405,9 +406,10 @@
 ;_______The ENTRY POINT TO INTERPRETING THE PROGRAM________
 (define interpret
   (lambda (filename)
-    (get 'return (mstate (parser filename) (initialstate) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (s) s)))))
+    (get 'return (mstate (parser filename) (initialstate) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (s) s) 'throw))))
 
 ;__________TESTS_____________
+;(interpret "flowtest19.txt")
 (eq? (interpret "test1.txt") 150)
 (eq? (interpret "test2.txt") -4)
 (eq? (interpret "test3.txt") 10)
