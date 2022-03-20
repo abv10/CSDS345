@@ -306,29 +306,35 @@
                        (lambda (s) (mstate (finallybody lis) s break break continue return throw));newbreak
                        (lambda (s) (mstate (finallybody lis) s continue break 'continue? return throw));newcontinue
                        (lambda (v) (return v state));newreturn ??NOT SURE ABOUT THIS ONE
-                       (lambda (s e) (mstate (catch lis) (add 'e e state) ; mythrow
+                       (lambda (s e) (mstate (catch lis) (add (catchvariable lis) e state) ; mythrow
                                               (lambda (s) (mstate (finallybody lis) s next break continue return throw)) ;new next
                                               (lambda (s) (mstate (finallybody lis) s break break continue return throw));newbreak
                                               (lambda (s) (mstate (finallybody lis) s continue break 'continue? return throw));newcontinue
                                               (lambda (v) (return v state));newreturn ??NOT SURE ABOUT THIS ONE
-                                              (lambda (s1 e1) (mstate (finallybody lis) s1
+                                              (lambda (s1 e1) (mstate (catch lis) s1
                                                                       (lambda (s2) (throw s2 e1))
                                                                       (lambda (s2) (throw s2 e1))
                                                                       (lambda (s2) (throw s2 e1))
                                                                       (lambda (v) (throw s1 e1))
                                                                       throw)))))))
 
-
+(define catchvariable
+  (lambda (lis)
+    (caar (cdaddr lis))))
                                               
 (define trybody
   (lambda (lis)
     (cadr lis)))
 (define catch
   (lambda (lis)
-    (caddr lis)))
+    (cond
+      ((null? (caddr lis)) (error 'uncaught))
+      (else (caddr lis)))))
 (define finallybody
   (lambda (lis)
-    (cadr (cadddr lis))))
+    (cond
+      ((null? (cadddr lis)) (cadddr lis))
+      (else (cadr (cadddr lis))))))
 
 
 
@@ -442,6 +448,9 @@
 (eq? (interpret "flowtest15.txt") 125)
 
 (eq? (interpret "flowtest16.txt") 110)
-;(interpret "flowtest17.txt")
+(interpret "flowtest17easy.txt")
+(interpret "flowtest17easywhile.txt")
+(interpret "flowtest17.txt")
 (eq? (interpret "flowtest18.txt") 101)
+;(parser "flowtest17.txt")
 ;(interpret "flowtest19.txt")

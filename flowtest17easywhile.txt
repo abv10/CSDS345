@@ -1,0 +1,22 @@
+var x = 0;
+
+try {
+while(x < 3){
+      try {
+        throw 1;
+      }
+      catch(e) {
+        x = x + 1;
+      }
+}
+	if(x < 21){
+		throw 17;
+	}      
+	else{
+		throw 15;
+	}
+}
+catch (e2) {
+  x = e2 * 2;
+}
+return x;
