@@ -86,7 +86,7 @@
     (cond
       [(and (nonextlayer? state) (emptycurrentlayer? state)) (error 'notassigned)]
       [(emptycurrentlayer? state) (get variable (nextlayers state))]
-      [(rightvariable? variable state) (selectedvalue state)]
+      [(rightvariable? variable state) (unbox (selectedvalue state))]
       [else (get variable (remainderofstate state))]
     )))
 
@@ -208,11 +208,11 @@
 ;-----------------HELPERS FOR MODIFYING THE LAYERED STATE--------------------
 (define add
   (lambda (variable value state)
-    (addhelper variable value state #f)))
+    (addhelper variable (box value) state #f)))
 
 (define adddeclare
   (lambda (variable value state)
-    (addhelper variable value state #t)))
+    (addhelper variable (box value) state #t)))
 
 (define addhelper
   (lambda (variable value state declaring)
@@ -270,7 +270,7 @@
     (cond
       [(and (nonextlayer? state) (emptycurrentlayer? state)) 'notdeclared]
       [(emptycurrentlayer? state) (getnoerror variable (nextlayers state))]
-      [(rightvariable? variable state) (selectedvalue state)]
+      [(rightvariable? variable state) (unbox (selectedvalue state))]
       [else (getnoerror variable (remainderofstate state))]
     )))
 
@@ -389,48 +389,48 @@
 
 ;__________TESTS_____________
 ;(interpret "flowtest19.txt")
-;(eq? (interpret "test1.txt") 150)
-;(eq? (interpret "test2.txt") -4)
-;(eq? (interpret "test3.txt") 10)
-;(eq? (interpret "test4.txt") 16)
-;(eq? (interpret "test5.txt") 220)
-;(eq? (interpret  "test6.txt") 5)
-;(eq? (interpret  "test7.txt") 6)
-;(eq? (interpret  "test8.txt") 10)
-;(eq? (interpret  "test9.txt") 5)
-;(eq? (interpret  "test10.txt") -39)
+(eq? (interpret "test1.txt") 150)
+(eq? (interpret "test2.txt") -4)
+(eq? (interpret "test3.txt") 10)
+(eq? (interpret "test4.txt") 16)
+(eq? (interpret "test5.txt") 220)
+(eq? (interpret  "test6.txt") 5)
+(eq? (interpret  "test7.txt") 6)
+(eq? (interpret  "test8.txt") 10)
+(eq? (interpret  "test9.txt") 5)
+(eq? (interpret  "test10.txt") -39)
 ;(interpret  "test11.txt")
 ;(interpret  "test12.txt")
 ;(interpret  "test13.txt")
 ;(interpret  "test14.txt")
-;(eq? (interpret  "test15.txt") 'true)
-;(eq? (interpret  "test16.txt") 100);
-;(eq? (interpret  "test17.txt") 'false)
-;(eq? (interpret  "test18.txt") 'true)
-;(eq? (interpret  "test19.txt") 128)
-;(eq? (interpret  "test20.txt") 12)
-;(eq? (interpret "flowtest1.txt") 20)
-;(eq? (interpret "flowtest2.txt") 164)
-;(eq? (interpret "flowtest3.txt") 32)
-;(eq? (interpret "flowtest4.txt") 2)
+(eq? (interpret  "test15.txt") 'true)
+(eq? (interpret  "test16.txt") 100);
+(eq? (interpret  "test17.txt") 'false)
+(eq? (interpret  "test18.txt") 'true)
+(eq? (interpret  "test19.txt") 128)
+(eq? (interpret  "test20.txt") 12)
+(eq? (interpret "flowtest1.txt") 20)
+(eq? (interpret "flowtest2.txt") 164)
+(eq? (interpret "flowtest3.txt") 32)
+(eq? (interpret "flowtest4.txt") 2)
 ;(interpret "flowtest5.txt") ;error
 
-;(eq? (interpret "flowtest6.txt") 25)
-;(eq? (interpret "flowtest7.txt") 21)
-;(eq? (interpret "flowtest8.txt") 6)
-;(eq? (interpret "flowtest9.txt") -1)
-;(eq? (interpret "flowtest10.txt") 789)
+(eq? (interpret "flowtest6.txt") 25)
+(eq? (interpret "flowtest7.txt") 21)
+(eq? (interpret "flowtest8.txt") 6)
+(eq? (interpret "flowtest9.txt") -1)
+(eq? (interpret "flowtest10.txt") 789)
 
 ;(eq? (interpret "flowtest11.txt") 'error)
 ;(interpret "flowtest12.txt") error
 ;(interpret "flowtest13.txt") error
-;(eq? (interpret "flowtest14.txt") 12)
+(eq? (interpret "flowtest14.txt") 12)
 ;(parser "flowtest10.txt")
-;(eq? (interpret "flowtest15.txt") 125)
+(eq? (interpret "flowtest15.txt") 125)
 
-;(eq? (interpret "flowtest16.txt") 110)
+(eq? (interpret "flowtest16.txt") 110)
 ;(interpret "flowtest17easy.txt")
 ;(interpret "flowtest17easywhile.txt")
-;(eq? (interpret "flowtest18.txt") 101)
+(eq? (interpret "flowtest18.txt") 101)
 ;(parser "flowtest17.txt")
 ;(interpret "flowtest19.txt")
