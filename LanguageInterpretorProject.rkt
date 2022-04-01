@@ -25,7 +25,7 @@
       [(eq? (operator lis) '-) (- (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state))]
       [(eq? (operator lis) '/) (quotient (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state))]
       [(eq? (operator lis) '%) (modulo (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state))]
-      [(eq? (operator lis) '=) (mvalue (secondexpression lis) state)]
+      [(eq? (operator lis) '=) (begin (add (firstexpression lis) (mvalue (secondexpression lis) state) state)(mvalue (secondexpression lis) state))]
       [(eq? (operator lis) '==) (mboolean lis state)]
       [(eq? (operator lis) '!=) (mboolean lis state)]
       [(eq? (operator lis) '<) (mboolean lis state)]
@@ -390,10 +390,22 @@
 ;--------------------
 
 ;__________TESTS_____________
-(interpret "etest21.txt")
-;(interpret "flowtest19.txt")
-;(eq? (interpret "test1.txt") 150)
-;(eq? (interpret "test2.txt") -4)
+(eq? (interpret "etest21.txt") 30)
+(eq? (interpret "etest22.txt") 11)
+(eq? (interpret "etest23.txt") 1106)
+(eq? (interpret "etest24.txt") 12)
+(eq? (interpret "etest25.txt") 16)
+(eq? (interpret "etest26.txt") 72)
+(eq? (interpret "etest27.txt") 21)
+(eq? (interpret "etest28.txt") 164)
+(eq? (interpret "eflowtest20.txt") 21)
+
+
+
+
+'(end etests)
+(eq? (interpret "test1.txt") 150)
+(eq? (interpret "test2.txt") -4)
 (eq? (interpret "test3.txt") 10)
 (eq? (interpret "test4.txt") 16)
 (eq? (interpret "test5.txt") 220)
@@ -432,8 +444,4 @@
 (eq? (interpret "flowtest15.txt") 125)
 
 (eq? (interpret "flowtest16.txt") 110)
-;(interpret "flowtest17easy.txt")
-;(interpret "flowtest17easywhile.txt")
 (eq? (interpret "flowtest18.txt") 101)
-;(parser "flowtest17.txt")
-;(interpret "flowtest19.txt")
