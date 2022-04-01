@@ -2,7 +2,8 @@
 ;Alex Vaslow
 ;Parker Griffin
 
-(require "simpleParser.rkt")
+(require "functionParser.rkt")
+
 
 ;_______The ENTRY POINT TO INTERPRETING THE PROGRAM________
 (define interpret
@@ -388,60 +389,26 @@
 
 ;End helpers
 ;--------------------
-
+(parser "functiontest1.txt")
 ;__________TESTS_____________
-(eq? (interpret "etest21.txt") 30)
-(eq? (interpret "etest22.txt") 11)
-(eq? (interpret "etest23.txt") 1106)
-(eq? (interpret "etest24.txt") 12)
-(eq? (interpret "etest25.txt") 16)
-(eq? (interpret "etest26.txt") 72)
-(eq? (interpret "etest27.txt") 21)
-(eq? (interpret "etest28.txt") 164)
-(eq? (interpret "eflowtest20.txt") 21)
+(interpret "functiontest1.txt")
+(interpret "functiontest2.txt")
+(interpret "functiontest3.txt")
+(interpret "functiontest4.txt")
+(interpret "functiontest5.txt")
+(interpret "functiontest6.txt")
+(interpret "functiontest7.txt")
+(interpret "functiontest8.txt")
+(interpret "functiontest9.txt")
+(interpret "functiontest10.txt")
+(interpret "functiontest11.txt")
+(interpret "functiontest12.txt")
+(interpret "functiontest13.txt")
+(interpret "functiontest14.txt")
+(interpret "functiontest15.txt")
+(interpret "functiontest16.txt")
+(interpret "functiontest17.txt")
+(interpret "functiontest18.txt")
+(interpret "functiontest19.txt")
+(interpret "functiontest20.txt")
 
-
-
-
-'(end etests)
-(eq? (interpret "test1.txt") 150)
-(eq? (interpret "test2.txt") -4)
-(eq? (interpret "test3.txt") 10)
-(eq? (interpret "test4.txt") 16)
-(eq? (interpret "test5.txt") 220)
-(eq? (interpret  "test6.txt") 5)
-(eq? (interpret  "test7.txt") 6)
-(eq? (interpret  "test8.txt") 10)
-(eq? (interpret  "test9.txt") 5)
-(eq? (interpret  "test10.txt") -39)
-;(interpret  "test11.txt")
-;(interpret  "test12.txt")
-;(interpret  "test13.txt")
-;(interpret  "test14.txt")
-(eq? (interpret  "test15.txt") 'true)
-(eq? (interpret  "test16.txt") 100);
-(eq? (interpret  "test17.txt") 'false)
-(eq? (interpret  "test18.txt") 'true)
-(eq? (interpret  "test19.txt") 128)
-(eq? (interpret  "test20.txt") 12)
-(eq? (interpret "flowtest1.txt") 20)
-(eq? (interpret "flowtest2.txt") 164)
-(eq? (interpret "flowtest3.txt") 32)
-(eq? (interpret "flowtest4.txt") 2)
-;(interpret "flowtest5.txt") ;error
-
-(eq? (interpret "flowtest6.txt") 25)
-(eq? (interpret "flowtest7.txt") 21)
-(eq? (interpret "flowtest8.txt") 6)
-(eq? (interpret "flowtest9.txt") -1)
-(eq? (interpret "flowtest10.txt") 789)
-
-;(eq? (interpret "flowtest11.txt") 'error)
-;(interpret "flowtest12.txt") error
-;(interpret "flowtest13.txt") error
-(eq? (interpret "flowtest14.txt") 12)
-;(parser "flowtest10.txt")
-(eq? (interpret "flowtest15.txt") 125)
-
-(eq? (interpret "flowtest16.txt") 110)
-(eq? (interpret "flowtest18.txt") 101)
