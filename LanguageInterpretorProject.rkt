@@ -104,6 +104,7 @@
   (lambda (lis state next break continue return throw)
     (if (not (isdeclared lis state))
         (error 'notdeclarederror)
+        ;(mstate (valuetoassign lis) state (lambda (v) (add (inputvariable lis) (mvalue (valuetoassign lis) v) v)) break continue return throw)
         (next (add (inputvariable lis) (mvalue (valuetoassign lis) state) state))
     )))
 
@@ -208,7 +209,7 @@
 ;-----------------HELPERS FOR MODIFYING THE LAYERED STATE--------------------
 (define add
   (lambda (variable value state)
-    (addhelper variable (box value) state #f)))
+    (addhelper variable value state #f)))
 
 (define adddeclare
   (lambda (variable value state)
@@ -220,7 +221,8 @@
       [(eq? #t declaring) (addnowcurrentlayer variable value state)] ;SINCE WE ALREADY CHECKED TO SEE IF VARIABLE IS DECLARED, WE JUST PUT IT ON THE BEGINING OF THE FIRST LAYER
       [(and (nonextlayer? state) (emptycurrentlayer? state)) (addvariabletoempty variable value state) ]
       [(emptycurrentlayer? state)(cons (currentlayer state) (addhelper variable value (nextlayers state) declaring))]
-      [(rightvariable? variable state)(changevalue variable value state)]
+      [(rightvariable? variable state)(begin (set-box! (selectedvalue state) value) state)]
+      ;[(rightvariable? variable state)(changevalue variable value state)]
       [else (addnowcurrentlayer (selectedvariable state) (selectedvalue state) (addhelper variable value (remainderofstate state) declaring))]
     )))
 
@@ -234,7 +236,7 @@
     
 (define changevalue
   (lambda (variable value state)
-    (cons (cons (currentlayervariables state) (cons (cons value (cdr (currentlayervalues state))) (emptylist)))(nextlayers state))))
+    (cons (cons (currentlayervariables state) (cons (cons (set-box! (car (currentlayervalues state)) value) (cdr (currentlayervalues state))) (emptylist)))(nextlayers state))))
 
 (define rightvariable?
   (lambda (variable state)
@@ -246,7 +248,7 @@
 
 (define addvariabletoempty
   (lambda (variable value state)
-    (cons (cons (cons variable (currentlayervariables state)) (cons (cons value (currentlayervalues state)) (emptylist)))(cdr state))))
+    (cons (cons (cons variable (currentlayervariables state)) (cons (cons (box value) (currentlayervalues state)) (emptylist)))(cdr state))))
 
 (define nonextlayer?
   (lambda (state)
@@ -388,9 +390,10 @@
 ;--------------------
 
 ;__________TESTS_____________
+(interpret "etest21.txt")
 ;(interpret "flowtest19.txt")
-(eq? (interpret "test1.txt") 150)
-(eq? (interpret "test2.txt") -4)
+;(eq? (interpret "test1.txt") 150)
+;(eq? (interpret "test2.txt") -4)
 (eq? (interpret "test3.txt") 10)
 (eq? (interpret "test4.txt") 16)
 (eq? (interpret "test5.txt") 220)
