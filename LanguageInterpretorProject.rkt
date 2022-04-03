@@ -69,6 +69,9 @@
       [(eq? (operator lis) 'var) (declare lis state next break continue return throw)]
       [(eq? (operator lis) '=) (assign lis state next break continue return throw)]
       [(eq? (operator lis) 'return) (returnfunction lis state next break continue return throw)]
+      [(and (eq? (operator lis) 'function)(not (eq? (functionname lis) 'main))) (addclosure lis state next)]
+      [(and (eq? (operator lis) 'function)(eq? (functionname lis) 'main)) (mstate (cadddr lis) state next break continue return throw)]
+      [(eq? (operator lis) 'funcall) (runfunction lis state next break continue return throw)]
       [(eq? (operator lis) 'if) (ifstatement lis state next break continue return throw)]
       [(eq? (operator lis) 'while) (whileloop lis state next (lambda (v) (next (nextlayers v))) continue return throw)]
       [(eq? (operator lis) 'break) (break state)]
@@ -78,15 +81,16 @@
       [(eq? (operator lis) 'throw) (throw state (mvalue (firstexpression lis) state))]
       [(eq? (operator lis) 'try) (trycatch lis state next break continue return throw)]
       [(not (null? (operatorcdr lis))) (mstate (operatorcdr lis) state next break continue return throw)] 
-      [(eq? (operator lis) 'function) (addclosure lis state)]
       [else (next state)]
     )))
 
 ;Add Function Closure to State
 ;need to add formal parameters, the body and what is in scope
 (define addclosure
-  (lambda (lis state)
-    (add (functionname lis) '((formalparameters lis) (functionbody lis) 1) state))) ;need to add part 3 of closure
+  (lambda (lis state next)
+    (cond
+      [(eq? (functionname lis) 'main) (next state)]
+      [(next (add (functionname lis) '((formalparameters lis) (functionbody lis) 1) state))]))) ;need to add part 3 of closure
 
 (define functionname
   (lambda (lis)
@@ -113,10 +117,15 @@
 
 ;Add Function Call
 (define runfunction
-  (lambda (lis state next throw)
+  (lambda (lis state next break continue return throw)
     (mstate
      (bodyfromclosure (get (functionname lis) state));body
      (bindparams (paramsfromclosure (get (functionname lis) state)) (paramsfromcall lis) (cons (newlayer) state))
+     (lambda (s) (next s))
+     (lambda (s) (error 'breakoutsideloop))
+     (lambda (s) (error 'continueoutsideloop))
+     (lambda (s v) (return s v))
+     (lambda (s e) (throw s e))
      )))
 
 
@@ -124,7 +133,7 @@
   (lambda (formal actual state)
     (cond
       [(null? formal) state]
-      [(bindparams (cdr formal) (cdr actual) (adddeclare (car formal) (car actual) state))])))
+      [(bindparams (cdr formal) (cdr actual) (adddeclare (car formal) (mvalue (car actual) state) state))])))
     
 
 ; gets the value of a variable
@@ -437,11 +446,16 @@
 ;--------------------
 (parser "functiontest4.txt")
 ;__________TESTS_____________
-(interpret "functiontest1.txt")
-(interpret "functiontest2.txt")
-(interpret "functiontest3.txt")
-;(interpret "functiontest4.txt")
-;(interpret "functiontest5.txt")
+'Test1
+(eq? (interpret "functiontest1.txt") 10)
+'Test2
+(eq?(interpret "functiontest2.txt") 14)
+'Test3
+(eq? (interpret "functiontest3.txt") 45)
+'Test4
+(eq? (interpret "functiontest4.txt") 55)
+'Test5
+(eq? (interpret "functiontest5.txt") 1)
 ;(interpret "functiontest6.txt")
 ;(interpret "functiontest7.txt")
 ;(interpret "functiontest8.txt")
