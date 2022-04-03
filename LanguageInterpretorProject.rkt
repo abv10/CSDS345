@@ -78,8 +78,54 @@
       [(eq? (operator lis) 'throw) (throw state (mvalue (firstexpression lis) state))]
       [(eq? (operator lis) 'try) (trycatch lis state next break continue return throw)]
       [(not (null? (operatorcdr lis))) (mstate (operatorcdr lis) state next break continue return throw)] 
+      [(eq? (operator lis) 'function) (addclosure lis state)]
       [else (next state)]
     )))
+
+;Add Function Closure to State
+;need to add formal parameters, the body and what is in scope
+(define addclosure
+  (lambda (lis state)
+    (add (functionname lis) '((formalparameters lis) (functionbody lis) 1) state))) ;need to add part 3 of closure
+
+(define functionname
+  (lambda (lis)
+    (cadr lis)))
+
+(define formalparameters
+  (lambda (lis)
+    (caddr lis)))
+
+(define functionbody
+  (lambda (lis)
+    (cadddr lis)))
+
+(define bodyfromclosure
+  (lambda (closure)
+    (cadr closure)))
+
+(define paramsfromclosure
+  (lambda (closure)
+    (car closure)))
+(define paramsfromcall
+  (lambda (call)
+    (cdr call)))
+
+;Add Function Call
+(define runfunction
+  (lambda (lis state next throw)
+    (mstate
+     (bodyfromclosure (get (functionname lis) state));body
+     (bindparams (paramsfromclosure (get (functionname lis) state)) (paramsfromcall lis) (cons (newlayer) state))
+     )))
+
+
+(define bindparams
+  (lambda (formal actual state)
+    (cond
+      [(null? formal) state]
+      [(bindparams (cdr formal) (cdr actual) (adddeclare (car formal) (car actual) state))])))
+    
 
 ; gets the value of a variable
 (define get
@@ -389,26 +435,26 @@
 
 ;End helpers
 ;--------------------
-(parser "functiontest1.txt")
+(parser "functiontest4.txt")
 ;__________TESTS_____________
 (interpret "functiontest1.txt")
 (interpret "functiontest2.txt")
 (interpret "functiontest3.txt")
-(interpret "functiontest4.txt")
-(interpret "functiontest5.txt")
-(interpret "functiontest6.txt")
-(interpret "functiontest7.txt")
-(interpret "functiontest8.txt")
-(interpret "functiontest9.txt")
-(interpret "functiontest10.txt")
-(interpret "functiontest11.txt")
-(interpret "functiontest12.txt")
-(interpret "functiontest13.txt")
-(interpret "functiontest14.txt")
-(interpret "functiontest15.txt")
-(interpret "functiontest16.txt")
-(interpret "functiontest17.txt")
-(interpret "functiontest18.txt")
-(interpret "functiontest19.txt")
-(interpret "functiontest20.txt")
+;(interpret "functiontest4.txt")
+;(interpret "functiontest5.txt")
+;(interpret "functiontest6.txt")
+;(interpret "functiontest7.txt")
+;(interpret "functiontest8.txt")
+;(interpret "functiontest9.txt")
+;(interpret "functiontest10.txt")
+;(interpret "functiontest11.txt")
+;(interpret "functiontest12.txt")
+;(interpret "functiontest13.txt")
+;(interpret "functiontest14.txt")
+;(interpret "functiontest15.txt")
+;(interpret "functiontest16.txt")
+;(interpret "functiontest17.txt")
+;(interpret "functiontest18.txt")
+;(interpret "functiontest19.txt")
+;(interpret "functiontest20.txt")
 
