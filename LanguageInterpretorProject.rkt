@@ -72,7 +72,7 @@
       [(eq? (operator lis) '=) (assign lis state next break continue return throw)]
       [(eq? (operator lis) 'return) (returnfunction lis state next break continue return throw)]
       [(and (eq? (operator lis) 'function)(not (eq? (functionname lis) 'main))) (addclosure lis state next)]
-      [(and (eq? (operator lis) 'function)(eq? (functionname lis) 'main)) (mstate (cadddr lis) state next break continue return throw)]
+      [(and (eq? (operator lis) 'function)(eq? (functionname lis) 'main)) (mstate (cadddr lis) (addstatelayer state) next break continue return throw)]
       [(eq? (operator lis) 'funcall) (runfunction lis state next return throw)]
       [(eq? (operator lis) 'if) (ifstatement lis state next break continue return throw)]
       [(eq? (operator lis) 'while) (whileloop lis state next (lambda (v) (next (nextlayers v))) continue return throw)]
@@ -97,9 +97,8 @@
 (define getscope
   (lambda (functionname state)
     (cond
-     [(emptycurrentlayer? state) (getscope functionname (nextlayers state))]
-     [(rightvariable? functionname state) state]
-     [else (addnowcurrentlayer (selectedvariable state) (selectedvalue state) (getscope functionname (remainderofstate state)))]))) 
+     [(rightlayer? functionname (currentlayervariables state)) state]
+     [else (getscope functionname (nextlayers state))]))) 
 (define functionname
   (lambda (lis)
     (cadr lis)))
@@ -142,7 +141,7 @@
     (cond
       [(and (null? formal) (null? actual)) state]
       [(or (null? formal) (null? actual)) (error 'mismatchparams)]
-      [else (bindparams (cdr formal) (cdr actual) (adddeclare (car formal) (mvalue (car actual) state next return throw) state) next return throw)])))
+      [else (bindparams (cdr formal) (cdr actual) (adddeclare (car formal) (mvalue (car actual) (nextlayers state) next return throw) state) next return throw)])))
     
 
 ; gets the value of a variable
@@ -159,7 +158,7 @@
 (define declare
   (lambda (lis state next break continue return throw)
     (cond
-      [(isdeclared lis state) (error 'redeclarederror)] 
+      [(isdeclared lis (cons (currentlayer state) (emptylist))) (error 'redeclarederror)] ; NOT SURE IF ONLY CHECKING TOP LAYER IS A STEP IN THE RIGHT DIRECTION OR NOT
       [(isnovaluetoassign lis)(next (add (inputvariable lis) 'declared state))]
       [else (next (adddeclare (inputvariable lis) (mvalue (valuetoassign lis) state next return throw) state)) ]
      )))
@@ -323,6 +322,13 @@
   (lambda (state)
     (null? (currentlayervariables state))))
 
+(define rightlayer?
+  (lambda (variable variablelayer)
+    (cond
+      [(null? variablelayer) #f]
+      [(eq? (car variablelayer) variable) #t]
+      [else (rightlayer? variable (cdr variablelayer))])))
+
 ; I have the state as two separate lists. One for variables, one for values. The initial state is then '(()())
 (define initialstate
   (lambda ()
@@ -454,6 +460,7 @@
 ;End helpers
 ;--------------------
 (parser "functiontest4.txt")
+;(interpret "functiontest6.txt")
 ;__________TESTS_____________
 (interpret "functiontesteasy1.txt")
 'Test1
