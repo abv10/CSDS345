@@ -24,8 +24,8 @@
       [(eq? (operator lis) '*) (* (mvalue (firstexpression lis) state next return throw) (mvalue (secondexpression lis) state next return throw))]
       [(eq? (operator lis) '+) (+ (mvalue (firstexpression lis) state next return throw) (mvalue (secondexpression lis) state next return throw))]
       [(eq? (operator lis) '-) (- (mvalue (firstexpression lis) state next return throw) (mvalue (secondexpression lis) state next return throw))]
-      [(eq? (operator lis) '/) (quotient (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state))]
-      [(eq? (operator lis) '%) (modulo (mvalue (firstexpression lis) state) (mvalue (secondexpression lis) state))]
+      [(eq? (operator lis) '/) (quotient (mvalue (firstexpression lis) state next return throw) (mvalue (secondexpression lis) state next return throw))]
+      [(eq? (operator lis) '%) (modulo (mvalue (firstexpression lis) state next return throw) (mvalue (secondexpression lis) state next return throw))]
       [(eq? (operator lis) '=) (begin (add (firstexpression lis) (mvalue (secondexpression lis) state next return throw) state)(mvalue (secondexpression lis) state next return throw))]
       [(eq? (operator lis) '==) (mboolean lis state next return throw)]
       [(eq? (operator lis) '!=) (mboolean lis state next return throw)]
@@ -80,7 +80,7 @@
       [(eq? (operator lis) 'continue) (continue state)]
       [(eq? (operator lis) 'begin) (block lis (addstatelayer state) next break continue return throw)]
       [(and (eq? (operator lis) 'throw) (eq? throw 'throw)) (error 'uncaughtthrow)]
-      [(eq? (operator lis) 'throw) (throw state (mvalue (firstexpression lis) state))]
+      [(eq? (operator lis) 'throw) (throw state (mvalue (firstexpression lis) state next return throw))]
       [(eq? (operator lis) 'try) (trycatch lis state next break continue return throw)]
       [(not (null? (operatorcdr lis))) (mstate (operatorcdr lis) state next break continue return throw)] 
       [else (next state)]
@@ -121,7 +121,7 @@
     (car closure)))
 (define paramsfromcall
   (lambda (call)
-    (cdr call)))
+    (cddr call)))
 
 ;Add Function Call
 (define runfunction
@@ -140,7 +140,8 @@
 (define bindparams
   (lambda (formal actual state next return throw)
     (cond
-      [(null? formal) state]
+      [(and (null? formal) (null? actual)) state]
+      [(or (null? formal) (null? actual)) (error 'mismatchparams)]
       [else (bindparams (cdr formal) (cdr actual) (adddeclare (car formal) (mvalue (car actual) state next return throw) state) next return throw)])))
     
 
@@ -176,9 +177,9 @@
 (define returnfunction
   (lambda (lis state next break continue return throw)
     (cond
-      [(eq? (mvalue (operatorcdr lis) state next return throw) #t) (add 'return 'true state)]
-      [(eq? (mvalue (operatorcdr lis) state next return throw) #f) (add 'return 'false state)]
-      [else (mstate (operatorcdr lis) state (lambda (v) (add 'return (mvalue (operatorcdr lis) v next return throw) v)) break continue return throw)]
+      [(eq? (mvalue (operatorcdr lis) state next return throw) #t) (adddeclare 'return 'true state)]
+      [(eq? (mvalue (operatorcdr lis) state next return throw) #f) (adddeclare 'return 'false state)]
+      [else (mstate (operatorcdr lis) state (lambda (v) (adddeclare 'return (mvalue (operatorcdr lis) v next return throw) v)) break continue return throw)]
     )))
 
 ; executes an if statement (no side effects)
@@ -454,29 +455,45 @@
 ;--------------------
 (parser "functiontest4.txt")
 ;__________TESTS_____________
+(interpret "functiontesteasy1.txt")
 'Test1
-;(eq? (interpret "functiontest1.txt") 10)
+(eq? (interpret "functiontest1.txt") 10)
 'Test2
-;(eq?(interpret "functiontest2.txt") 14)
+(eq?(interpret "functiontest2.txt") 14)
 'Test3
-;(eq? (interpret "functiontest3.txt") 45)
+(eq? (interpret "functiontest3.txt") 45)
 'Test4
 ;(eq? (interpret "functiontest4.txt") 55)
 'Test5
 ;(eq? (interpret "functiontest5.txt") 1)
-(interpret "functiontest6.txt")
-;(interpret "functiontest7.txt")
-;(interpret "functiontest8.txt")
-;(interpret "functiontest9.txt")
-;(interpret "functiontest10.txt")
-;(interpret "functiontest11.txt")
+;(interpret "functiontest6.txt")
+'Test7
+(eq? (interpret "functiontest7.txt") 'true)
+'Test8
+(eq? (interpret "functiontest8.txt") 20)
+'Test9
+(eq? (interpret "functiontest9.txt") 24)
+'Test10
+(interpret "functiontest10.txt")
+'Test11
+(eq? (interpret "functiontest11.txt") 35)
+'Test12CorrectlyThrowsError
 ;(interpret "functiontest12.txt")
-;(interpret "functiontest13.txt")
-;(interpret "functiontest14.txt")
+'Test13
+(interpret "functiontest13.txt")
+'Test14
+(eq? (interpret "functiontest14.txt") 69)
+'Test15
 ;(interpret "functiontest15.txt")
+'Test16
 ;(interpret "functiontest16.txt")
+'Test17
+;This correctly throughs a notdeclarederror
 ;(interpret "functiontest17.txt")
-;(interpret "functiontest18.txt")
-;(interpret "functiontest19.txt")
-;(interpret "functiontest20.txt")
+'Test18
+(eq? (interpret "functiontest18.txt") 125)
+'Test19
+(interpret "functiontest19.txt")
+'Test20
+(interpret "functiontest20.txt")
 

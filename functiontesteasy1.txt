@@ -1,0 +1,10 @@
+var b = 4;
+
+function fib(a) {
+ return (a + b);
+}
+
+function main() {
+ var c = fib(10);
+  return c + 1;
+}
