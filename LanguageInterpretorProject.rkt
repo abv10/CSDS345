@@ -92,7 +92,7 @@
   (lambda (lis state next)
     (cond
       [(eq? (functionname lis) 'main) (next state)]
-      [(next (add (functionname lis) '((formalparameters lis) (functionbody lis) 1) (functionname lis)))]))) ;need to add part 3 of closure
+      [(next (adddeclare (functionname lis) (list (formalparameters lis) (functionbody lis) 1) state))]))) ;need to add part 3 of closure
 
 (define getscope
   (lambda (functionname state)
@@ -128,7 +128,7 @@
   (lambda (lis state next return throw)
     (mstate
      (bodyfromclosure (get (functionname lis) state));body
-     (bindparams (paramsfromclosure (get (functionname lis) state)) (paramsfromcall lis) (cons (newlayer) (getscope (functionname lis) state)))
+     (bindparams (paramsfromclosure (get (functionname lis) state)) (paramsfromcall lis) (cons (newlayer) (getscope (functionname lis) state)) next return throw)
      (lambda (s) (next s))
      (lambda (s) (error 'breakoutsideloop))
      (lambda (s) (error 'continueoutsideloop))
@@ -138,10 +138,10 @@
 
 
 (define bindparams
-  (lambda (formal actual state)
+  (lambda (formal actual state next return throw)
     (cond
       [(null? formal) state]
-      [(bindparams (cdr formal) (cdr actual) (adddeclare (car formal) (mvalue (car actual) state) state))])))
+      [else (bindparams (cdr formal) (cdr actual) (adddeclare (car formal) (mvalue (car actual) state next return throw) state) next return throw)])))
     
 
 ; gets the value of a variable
@@ -455,16 +455,16 @@
 (parser "functiontest4.txt")
 ;__________TESTS_____________
 'Test1
-(eq? (interpret "functiontest1.txt") 10)
+;(eq? (interpret "functiontest1.txt") 10)
 'Test2
-(eq?(interpret "functiontest2.txt") 14)
+;(eq?(interpret "functiontest2.txt") 14)
 'Test3
-(eq? (interpret "functiontest3.txt") 45)
+;(eq? (interpret "functiontest3.txt") 45)
 'Test4
-(eq? (interpret "functiontest4.txt") 55)
+;(eq? (interpret "functiontest4.txt") 55)
 'Test5
-(eq? (interpret "functiontest5.txt") 1)
-;(interpret "functiontest6.txt")
+;(eq? (interpret "functiontest5.txt") 1)
+(interpret "functiontest6.txt")
 ;(interpret "functiontest7.txt")
 ;(interpret "functiontest8.txt")
 ;(interpret "functiontest9.txt")
