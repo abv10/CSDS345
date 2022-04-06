@@ -68,12 +68,12 @@
       [(null? lis) (next state)]
       [(atom? lis) (next state)]
       [(list? (operator lis)) (mstate (operator lis) state (lambda (s) (mstate (operatorcdr lis) s next break continue return throw)) break continue return throw)]
+      [(eq? (operator lis) 'funcall) (runfunction lis state next return throw)]
       [(eq? (operator lis) 'var) (declare lis state next break continue return throw)]
       [(eq? (operator lis) '=) (assign lis state next break continue return throw)]
       [(eq? (operator lis) 'return) (returnfunction lis state next break continue return throw)]
       [(and (eq? (operator lis) 'function)(not (eq? (functionname lis) 'main))) (addclosure lis state next)]
-      [(and (eq? (operator lis) 'function)(eq? (functionname lis) 'main)) (mstate (cadddr lis) (addstatelayer state) next break continue return throw)]
-      [(eq? (operator lis) 'funcall) (runfunction lis state next return throw)]
+      [(and (eq? (operator lis) 'function)(eq? (functionname lis) 'main)) (mstate (cadddr lis) (addclosure lis state next) next break continue return throw)]
       [(eq? (operator lis) 'if) (ifstatement lis state next break continue return throw)]
       [(eq? (operator lis) 'while) (whileloop lis state next (lambda (v) (next (nextlayers v))) continue return throw)]
       [(eq? (operator lis) 'break) (break state)]
@@ -98,7 +98,8 @@
   (lambda (functionname state)
     (cond
      [(rightlayer? functionname (currentlayervariables state)) state]
-     [else (getscope functionname (nextlayers state))]))) 
+     [else (getscope functionname (nextlayers state))])))
+
 (define functionname
   (lambda (lis)
     (cadr lis)))
@@ -459,16 +460,16 @@
 
 ;End helpers
 ;--------------------
-(parser "functiontest4.txt")
+(parser "functiontest4b.txt")
 ;(interpret "functiontest6.txt")
 ;__________TESTS_____________
-(interpret "functiontesteasy1.txt")
+;(interpret "functiontesteasy1.txt")
 'Test1
-;(eq? (interpret "functiontest1.txt") 10)
+(eq? (interpret "functiontest1.txt") 10)
 'Test2
-;(eq?(interpret "functiontest2.txt") 14)
+(eq?(interpret "functiontest2.txt") 14)
 'Test3
-;(eq? (interpret "functiontest3.txt") 45)
+(eq? (interpret "functiontest3.txt") 45)
 'Test4
 (eq? (interpret "functiontest4.txt") 55)
 'Test5
