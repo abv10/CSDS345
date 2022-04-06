@@ -11,14 +11,7 @@
 
 (define interpret
   (lambda (filename)
-    (checkforbool (runmain (addglobal (parser filename) (initialstate) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (s) s) 'throw) (lambda (v) v) (lambda (v) v) 'throw))))
-
-(define checkforbool
-  (lambda (v)
-    (cond
-      [(eq? v #t) 'true]
-      [(eq? v #f) 'false]
-      [else v])))
+    (runmain (cons (newlayer) (addglobal (parser filename) (initialstate) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (s) s) 'throw)) (lambda (v) v) (lambda (v) v) 'throw)))
 
 ;---------------------MVALUE AND MBOOLEAN FUNCTIONS----------------------
 (define mvalue
@@ -26,8 +19,6 @@
     (cond
       [(number? lis) (next lis)]
       [(boolean? lis) (next lis)]
-      [(eq? lis #t) (next lis)]
-      [(eq? lis #f) (next lis)]
       [(eq? lis 'true) (next #t)]
       [(eq? lis 'false) (next #f)]
       [(and (atom? lis) (eq? (get lis state) 'declared)) (next (error 'notassignederror))]
@@ -48,7 +39,7 @@
       [(eq? (operator lis) '!) (mboolean lis state next throw)]
       [(eq? (operator lis) '||) (mboolean lis state next throw)]
       [(eq? (operator lis) '&&) (mboolean lis state next throw)]
-      [(eq? (operator lis) 'funcall) (next (runfunctionval lis state throw))] ; NEW
+      [(eq? (operator lis) 'funcall) (next (get 'return (runfunction lis state (lambda (v) v) (lambda (v) v) throw)))] ; NEW
       [(null? (operatorcdr lis)) (mvalue (operator lis) state next throw)]
       )))
 
@@ -60,8 +51,6 @@
       [(eq? lis 'true) (next #t)]
       [(eq? lis 'false) (next #f)]
       [(atom? lis) (next (get lis state))]
-      [(eq? (operator lis) 'funcall) (next (runfunctionval lis state throw))]
-
       [(eq? (operator lis) '==) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (eq? v1 v2))) throw)) throw)]
       [(eq? (operator lis) '!=) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (not (eq? v1 v2)))) throw)) throw)]
       [(eq? (operator lis) '<) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (< v1 v2))) throw)) throw)]
@@ -81,10 +70,10 @@
       [(null? lis) (next state)]
       [(atom? lis) (next state)]
       [(list? (operator lis)) (mstate (operator lis) state (lambda (s) (mstate (operatorcdr lis) s next break continue return throw)) break continue return throw)]
-      [(eq? (operator lis) 'funcall) (next (runfunction lis state (lambda(v) v) return throw))] ; new
+      [(eq? (operator lis) 'funcall) (next (runfunction lis state next return throw))] ; new
       [(eq? (operator lis) 'var) (declare lis state next break continue return throw)]
       [(eq? (operator lis) '=) (assign lis state next break continue return throw)]
-      [(eq? (operator lis) 'return) (return (mvalue (firstexpression lis) state (lambda (v) v) throw))]
+      [(eq? (operator lis) 'return) (returnfunction lis state next break continue return throw)]
       [(and (eq? (operator lis) 'function)(not (eq? (functionname lis) 'main))) (addclosure lis state next)] ;new
       [(and (eq? (operator lis) 'function)(eq? (functionname lis) 'main)) (mstate (cadddr lis) (addclosure lis state next) next break continue return throw)] ;new
       [(eq? (operator lis) 'if) (ifstatement lis state next break continue return throw)]
@@ -120,6 +109,7 @@
 (define addclosure
   (lambda (lis state next)
     (cond
+      ;[(eq? (functionname lis) 'main) (next (cons (newlayer) state))]
       [(next (adddeclare (functionname lis) (list (formalparameters lis) (functionbody lis) 1) state))]))) ;need to add part 3 of closure
 
 (define getscope
@@ -154,45 +144,35 @@
 ;Add Function Call
 (define runmain
   (lambda (state next return throw)
-    (mstate
+    (get 'return (mstate
      (bodyfromclosure (get 'main state));body
-     (bindparams (paramsfromclosure (get 'main state)) empty (cons (newlayer) (getscope 'main state)) state throw)
-     (lambda (s) (error 'noreturn))
+     (cons (newlayer) (bindparams (paramsfromclosure (get 'main state)) empty (cons (newlayer) (getscope 'main state)) state next return throw))
+     (lambda (s) (next s))
      (lambda (s) (error 'breakoutsideloop))
      (lambda (s) (error 'continueoutsideloop))
-      (lambda (s) s)
-     (lambda (s) (error 'uncaughtthrow))
-     )))
-;(next (get 'return (runfunction lis state (lambda (v) v) (lambda (v) v) throw)
+     (lambda (s v) (return s v))
+     (lambda (s e) (throw s e))
+     ))))
+
 (define runfunction
   (lambda (lis state next return throw)
     (mstate
      (bodyfromclosure (get (functionname lis) state));body
-     (bindparams (paramsfromclosure (get (functionname lis) state)) (paramsfromcall lis) (cons (newlayer) (getscope (functionname lis) state)) state throw)
-     (lambda (s) next)
+     (bindparams (paramsfromclosure (get (functionname lis) state)) (paramsfromcall lis) (cons (newlayer) (getscope (functionname lis) state)) state next return throw)
+     (lambda (s) (next s))
      (lambda (s) (error 'breakoutsideloop))
      (lambda (s) (error 'continueoutsideloop))
-     (lambda (s) (next state))
-     throw)
-     ))
-(define runfunctionval
-  (lambda (lis state throw)
-    (mstate
-     (bodyfromclosure (get (functionname lis) state));body
-     (bindparams (paramsfromclosure (get (functionname lis) state)) (paramsfromcall lis) (cons (newlayer) (getscope (functionname lis) state)) state throw)
-     (lambda (s) (error 'noreturn))
-     (lambda (s) (error 'breakoutsideloop))
-     (lambda (s) (error 'continueoutsideloop))
-     (lambda (s) s)
-     throw)
-     ))
+     (lambda (s v) (return s v))
+     (lambda (s e) (throw s e))
+     )))
+
 
 (define bindparams
-  (lambda (formal actual environment state throw)
+  (lambda (formal actual environment state next return throw)
     (cond
       [(and (null? formal) (null? actual)) environment]
       [(or (null? formal) (null? actual)) (error 'mismatchparams)]
-      [else (bindparams (cdr formal) (cdr actual) (adddeclare (car formal) (mvalue (car actual) state (lambda (v) v) throw) environment) state throw)])))
+      [else (bindparams (cdr formal) (cdr actual) (adddeclare (car formal) (mvalue (car actual) state (lambda (v) v) throw) environment) state next return throw)])))
 
 ; gets the value of a variable
 (define get
@@ -209,7 +189,7 @@
   (lambda (lis state next break continue return throw)
     (cond
       [(isdeclared lis (cons (currentlayer state) (emptylist))) (error 'redeclarederror)] 
-      [(isnovaluetoassign lis)(next (adddeclare (inputvariable lis) 'declared state))]
+      [(isnovaluetoassign lis)(next (add (inputvariable lis) 'declared state))]
       [else (next (adddeclare (inputvariable lis) (mvalue (valuetoassign lis) state (lambda (v) v) throw) state)) ]
      )))
 
@@ -511,9 +491,7 @@
 ;--------------------
 
 ;__________TESTS_____________
-(interpret "functiontest19easy.txt")
-;(interpret "functiontest7.txt")
-(error 'break)
+(interpret "functiontest16.txt")
 'ETest21
 (eq? (interpret "etest21.txt") 30)
 'ETest22
@@ -606,28 +584,28 @@
 (eq? (interpret "flowtest17.txt") 2000400)
 'Flowtest18
 (eq? (interpret "flowtest18.txt") 101)
-'FunTest1
+'Test1
 (eq? (interpret "functiontest1.txt") 10)
-'FunTest2
+'Test2
 (eq?(interpret "functiontest2.txt") 14)
-'FunTest3
+'Test3
 (eq? (interpret "functiontest3.txt") 45)
-'FunTest4
+'Test4
 (eq? (interpret "functiontest4.txt") 55)
-'FunTest5
+'Test5
 (eq? (interpret "functiontest5.txt") 1)
-'FunTest6
+'Test6
 (eq? (interpret "functiontest6.txt") 115)
-'FunTest7
+'Test7
 (eq? (interpret "functiontest7.txt") 'true)
-'FunTest8
+'Test8
 (eq? (interpret "functiontest8.txt") 20)
 'Test9
 (eq? (interpret "functiontest9.txt") 24)
 'Test10
 (eq? (interpret "functiontest10.txt") 2)
 'Test11
-;(eq? (interpret "functiontest11.txt") 35)
+(eq? (interpret "functiontest11.txt") 35)
 'Test12CorrectlyThrowsError
 ;(interpret "functiontest12.txt")
 'Test13
@@ -635,9 +613,9 @@
 'Test14
 (eq? (interpret "functiontest14.txt") 69)
 'Test15
-(eq? (interpret "functiontest15.txt") 87)
+(interpret "functiontest15.txt")
 'Test16
-;(eq? (interpret "functiontest16.txt") 64)
+;(interpret "functiontest16.txt")
 'Test17
 ;This correctly throughs a notdeclarederror
 ;(interpret "functiontest17.txt")

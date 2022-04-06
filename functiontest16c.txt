@@ -1,0 +1,29 @@
+function main() {
+  var result;
+  var base;
+
+  function getpow(a) {
+     var x;
+
+     function setanswer(n) {
+        result = n * base;
+     }
+
+     function recurse(m) {
+       	if(m == 1){
+		setanswer(x);
+	}
+	else{
+		x = x + 1;
+		m = m -1;
+		recurse(m);
+	}
+     }
+
+     x = 1;
+     recurse(a);
+  }
+  base = 2;
+  getpow(2);
+  return result;
+}

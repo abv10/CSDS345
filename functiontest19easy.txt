@@ -1,0 +1,18 @@
+function divide(x, y) {
+    throw y;
+}
+
+function main() {
+  var x;
+
+  try {
+    x = divide(10, 5);
+  }
+  catch(e) {
+    x = e +1;
+  }
+  finally {
+    x = x + 100;
+  }
+  return x;
+}

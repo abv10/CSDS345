@@ -1,0 +1,8 @@
+function divide() {
+   var x = 2;
+}
+
+function main() {
+	divide();
+ 	return 2;
+}
