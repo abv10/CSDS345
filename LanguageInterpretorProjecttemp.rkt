@@ -6,29 +6,26 @@
 
 
 ;_______The ENTRY POINT TO INTERPRETING THE PROGRAM________
-(define interpret2
+(define interpret
   (lambda (filename)
     (get 'return (mstate (parser filename) (initialstate) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (s) s) 'throw))))
 
-(define interpret
-  (lambda (filename)
-    (runmain (cons (newlayer) (addglobal (parser filename) (initialstate) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (s) s) 'throw)) (lambda (v) v) (lambda (v) v) 'throw)))
 ;---------------------MVALUE AND MBOOLEAN FUNCTIONS----------------------
 (define mvalue
   (lambda (lis state next return throw)
     (cond
-      [(number? lis) lis]
-      [(boolean? lis) lis]
-      [(eq? lis 'true) #t]
-      [(eq? lis 'false) #f]
+      [(number? lis) (return lis)]
+      [(boolean? lis) (return lis)]
+      [(eq? lis 'true) (return #t)]
+      [(eq? lis 'false) (return #f)]
       [(and (atom? lis) (eq? (get lis state) 'declared))(error 'notassignederror)]
       [(atom? lis) (get lis state)]
-      [(and (eq? (operator lis) '-)(null? (firstexpressioncdr lis))) (- (mvalue (firstexpression lis) state next return throw))]
-      [(eq? (operator lis) '*) (* (mvalue (firstexpression lis) state next return throw) (mvalue (secondexpression lis) state next return throw))]
-      [(eq? (operator lis) '+) (+ (mvalue (firstexpression lis) state next return throw) (mvalue (secondexpression lis) state next return throw))]
-      [(eq? (operator lis) '-) (- (mvalue (firstexpression lis) state next return throw) (mvalue (secondexpression lis) state next return throw))]
-      [(eq? (operator lis) '/) (quotient (mvalue (firstexpression lis) state next return throw) (mvalue (secondexpression lis) state next return throw))]
-      [(eq? (operator lis) '%) (modulo (mvalue (firstexpression lis) state next return throw) (mvalue (secondexpression lis) state next return throw))]
+      [(and (eq? (operator lis) '-)(null? (firstexpressioncdr lis))) (mvalue (firstexpression lis) state next (lambda (v) (return (- v))) throw)]
+      [(eq? (operator lis) '*) (mvalue (firstexpression lis) state next (lambda (v1) (mvalue (secondexpression lis) state next (lambda (v2) (return (* v1 v2))) throw)) throw)]
+      [(eq? (operator lis) '+) (mvalue (firstexpression lis) state next (lambda (v1) (mvalue (secondexpression lis) state next (lambda (v2) (return (+ v1 v2))) throw)) throw)]
+      [(eq? (operator lis) '-) (mvalue (firstexpression lis) state next (lambda (v1) (mvalue (secondexpression lis) state next (lambda (v2) (return (- v1 v2))) throw)) throw)]
+      [(eq? (operator lis) '/) (mvalue (firstexpression lis) state next (lambda (v1) (mvalue (secondexpression lis) state next (lambda (v2) (return (quotient v1 v2))) throw)) throw)]
+      [(eq? (operator lis) '%) (mvalue (firstexpression lis) state next (lambda (v1) (mvalue (secondexpression lis) state next (lambda (v2) (return (modulo v1 v2))) throw)) throw)]
       [(eq? (operator lis) '=) (begin (add (firstexpression lis) (mvalue (secondexpression lis) state next return throw) state)(mvalue (secondexpression lis) state next return throw))]
       [(eq? (operator lis) '==) (mboolean lis state next return throw)]
       [(eq? (operator lis) '!=) (mboolean lis state next return throw)]
@@ -47,19 +44,19 @@
 (define mboolean
   (lambda (lis state next return throw)
     (cond
-      [(number? lis) lis]
-      [(eq? lis 'true) #t]
-      [(eq? lis 'false) #f]
-      [(atom? lis) (get lis state)]
-      [(eq? (operator lis) '==) (eq? (mvalue (firstexpression lis) state next return throw) (mvalue (secondexpression lis) state next return throw))]
-      [(eq? (operator lis) '!=) (not (eq? (mvalue (firstexpression lis) state next return throw) (mvalue (secondexpression lis) state next return throw)))]
-      [(eq? (operator lis) '<) (< (mvalue (firstexpression lis) state next return throw) (mvalue (secondexpression lis) state next return throw))]
-      [(eq? (operator lis) '>) (> (mvalue (firstexpression lis) state next return throw) (mvalue (secondexpression lis) state next return throw))]
-      [(eq? (operator lis) '>=) (>= (mvalue (firstexpression lis) state next return throw) (mvalue (secondexpression lis) state next return throw))]
-      [(eq? (operator lis) '<=) (<= (mvalue (firstexpression lis) state next return throw) (mvalue (secondexpression lis) state next return throw))]
-      [(eq? (operator lis) '!) (not (mvalue (firstexpression lis) state next return throw))]
-      [(eq? (operator lis) '||) (or (mvalue (firstexpression lis) state next return throw) (mvalue (secondexpression lis) state next return throw))]
-      [(eq? (operator lis) '&&) (and (mvalue (firstexpression lis) state next return throw)(mvalue (secondexpression lis) state next return throw))]
+      [(number? lis) (return lis)]
+      [(eq? lis 'true) (return #t)]
+      [(eq? lis 'false) (return #f)]
+      [(atom? lis) (return (get lis state))]
+      [(eq? (operator lis) '==) (mvalue (firstexpression lis) state next (lambda (v1) (mvalue (secondexpression lis) state next (lambda (v2) (return (eq? v1 v2))) throw)) throw)]
+      [(eq? (operator lis) '!=) (mvalue (firstexpression lis) state next (lambda (v1) (mvalue (secondexpression lis) state next (lambda (v2) (return (not (eq? v1 v2)))) throw)) throw)]
+      [(eq? (operator lis) '<) (mvalue (firstexpression lis) state next (lambda (v1) (mvalue (secondexpression lis) state next (lambda (v2) (return (< v1 v2))) throw)) throw)]
+      [(eq? (operator lis) '>) (mvalue (firstexpression lis) state next (lambda (v1) (mvalue (secondexpression lis) state next (lambda (v2) (return (> v1 v2))) throw)) throw)]
+      [(eq? (operator lis) '>=) (mvalue (firstexpression lis) state next (lambda (v1) (mvalue (secondexpression lis) state next (lambda (v2) (return (>= v1 v2))) throw)) throw)]
+      [(eq? (operator lis) '<=) (mvalue (firstexpression lis) state next (lambda (v1) (mvalue (secondexpression lis) state next (lambda (v2) (return (<= v1 v2))) throw)) throw)]
+      [(eq? (operator lis) '!) (mvalue (firstexpression lis) state next (lambda (v) (return (not v))) throw)] ;change this
+      [(eq? (operator lis) '||) (mvalue (firstexpression lis) state next (lambda (v1) (mvalue (secondexpression lis) state next (lambda (v2) (return (or v1 v2))) throw)) throw)]
+      [(eq? (operator lis) '&&)(mvalue (firstexpression lis) state next (lambda (v1) (mvalue (secondexpression lis) state next (lambda (v2) (return (and v1 v2))) throw)) throw)]
       
       )))
 
@@ -71,7 +68,7 @@
       [(null? lis) (next state)]
       [(atom? lis) (next state)]
       [(list? (operator lis)) (mstate (operator lis) state (lambda (s) (mstate (operatorcdr lis) s next break continue return throw)) break continue return throw)]
-      [(eq? (operator lis) 'funcall) (next (runfunction lis state next return throw))]
+      [(eq? (operator lis) 'funcall) (runfunction lis state next return throw)]
       [(eq? (operator lis) 'var) (declare lis state next break continue return throw)]
       [(eq? (operator lis) '=) (assign lis state next break continue return throw)]
       [(eq? (operator lis) 'return) (returnfunction lis state next break continue return throw)]
@@ -88,20 +85,6 @@
       [(not (null? (operatorcdr lis))) (mstate (operatorcdr lis) state next break continue return throw)] 
       [else (next state)]
     )))
-(define addglobal
-  (lambda (lis state next break continue return throw)
-    (cond
-       [(null? lis) (next state)]
-       [(list? (operator lis)) (addglobal (operator lis) state (lambda (s) (addglobal (operatorcdr lis) s next break continue return throw)) break continue return throw)]
-       [(eq? (operator lis) 'function) (addclosure lis state next)]
-       [(eq? (operator lis) 'var) (declare lis state next break continue return throw)]
-       [else (next state)]
-       )))
-
-
-       
-
-       
 
 
 ;Add Function Closure to State
@@ -109,8 +92,8 @@
 (define addclosure
   (lambda (lis state next)
     (cond
-      ;[(eq? (functionname lis) 'main) (next (cons (newlayer) state))]
-      [(next (adddeclare (functionname lis) (list (formalparameters lis) (functionbody lis) 1) state))]))) ;need to add part 3 of closure
+      [(eq? (functionname lis) 'main) (next (cons (newlayer) state))]
+      [else (next (adddeclare (functionname lis) (list (formalparameters lis) (functionbody lis) 1) state))]))) ;need to add part 3 of closure
 
 (define getscope
   (lambda (functionname state)
@@ -142,18 +125,6 @@
     (cddr call)))
 
 ;Add Function Call
-(define runmain
-  (lambda (state next return throw)
-    (get 'return (mstate
-     (bodyfromclosure (get 'main state));body
-     (cons (newlayer) (bindparams (paramsfromclosure (get 'main state)) empty (cons (newlayer) (getscope 'main state)) state next return throw))
-     (lambda (s) (next s))
-     (lambda (s) (error 'breakoutsideloop))
-     (lambda (s) (error 'continueoutsideloop))
-     (lambda (s v) (return s v))
-     (lambda (s e) (throw s e))
-     ))))
-
 (define runfunction
   (lambda (lis state next return throw)
     (mstate
@@ -493,46 +464,46 @@
 (parser "functiontest4b.txt")
 ;(interpret "functiontest6.txt")
 ;__________TESTS_____________
-;(interpret2 "functiontesteasy1.txt")
+(interpret "functiontesteasy1.txt")
 'Test1
-(eq? (interpret "functiontest1.txt") 10)
+;(eq? (interpret "functiontest1.txt") 10)
 'Test2
-(eq?(interpret "functiontest2.txt") 14)
+;(eq?(interpret "functiontest2.txt") 14)
 'Test3
-(eq? (interpret "functiontest3.txt") 45)
+;(eq? (interpret "functiontest3.txt") 45)
 'Test4
-(eq? (interpret "functiontest4.txt") 55)
+;(eq? (interpret "functiontest4.txt") 55)
 'Test5
-(eq? (interpret "functiontest5.txt") 1)
+;(eq? (interpret "functiontest5.txt") 1)
 'Test6
-(eq? (interpret "functiontest6.txt") 115)
+;(eq? (interpret "functiontest6.txt") 115)
 'Test7
-(eq? (interpret "functiontest7.txt") 'true)
+;(eq? (interpret "functiontest7.txt") 'true)
 'Test8
-(eq? (interpret "functiontest8.txt") 20)
+;(eq? (interpret "functiontest8.txt") 20)
 'Test9
-(eq? (interpret "functiontest9.txt") 24)
+;(eq? (interpret "functiontest9.txt") 24)
 'Test10
-(eq? (interpret "functiontest10.txt") 2)
+;(interpret "functiontest10.txt")
 'Test11
-(eq? (interpret "functiontest11.txt") 35)
+;(eq? (interpret "functiontest11.txt") 35)
 'Test12CorrectlyThrowsError
 ;(interpret "functiontest12.txt")
 'Test13
-(eq? (interpret "functiontest13.txt") 90)
+;(eq? (interpret "functiontest13.txt") 90)
 'Test14
-(eq? (interpret "functiontest14.txt") 69)
+;(eq? (interpret "functiontest14.txt") 69)
 'Test15
-(interpret "functiontest15.txt")
+;(interpret "functiontest15.txt")
 'Test16
 ;(interpret "functiontest16.txt")
 'Test17
 ;This correctly throughs a notdeclarederror
 ;(interpret "functiontest17.txt")
 'Test18
-(eq? (interpret "functiontest18.txt") 125)
+;(eq? (interpret "functiontest18.txt") 125)
 'Test19
-(interpret "functiontest19.txt")
+;(interpret "functiontest19.txt")
 'Test20
-(interpret "functiontest20.txt")
+;(interpret "functiontest20.txt")
 
