@@ -11,7 +11,7 @@
 
 (define interpret
   (lambda (filename)
-    (runmain (cons (newlayer) (addglobal (parser filename) (initialstate) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (s) s) 'throw)) (lambda (v) v) (lambda (v) v) 'throw)))
+    (runmain (addglobal (parser filename) (initialstate) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (s) s) 'throw) (lambda (v) v) (lambda (v) v) 'throw)))
 
 ;---------------------MVALUE AND MBOOLEAN FUNCTIONS----------------------
 (define mvalue
@@ -145,12 +145,12 @@
   (lambda (state next return throw)
     (get 'return (mstate
      (bodyfromclosure (get 'main state));body
-     (cons (newlayer) (bindparams (paramsfromclosure (get 'main state)) empty (cons (newlayer) (getscope 'main state)) state next return throw))
-     (lambda (s) (next s))
+     (bindparams (paramsfromclosure (get 'main state)) empty (cons (newlayer) (getscope 'main state)) state next return throw)
+     (lambda (s) (next state))
      (lambda (s) (error 'breakoutsideloop))
      (lambda (s) (error 'continueoutsideloop))
-     (lambda (s v) (return s v))
-     (lambda (s e) (throw s e))
+     (lambda (s) (next state))
+     (lambda (s e) (throw state e))
      ))))
 
 (define runfunction
@@ -158,11 +158,11 @@
     (mstate
      (bodyfromclosure (get (functionname lis) state));body
      (bindparams (paramsfromclosure (get (functionname lis) state)) (paramsfromcall lis) (cons (newlayer) (getscope (functionname lis) state)) state next return throw)
-     (lambda (s) (next s))
+     (lambda (s) (next state))
      (lambda (s) (error 'breakoutsideloop))
      (lambda (s) (error 'continueoutsideloop))
-     (lambda (s v) (return s v))
-     (lambda (s e) (throw s e))
+     (lambda (s) (next state))
+     (lambda (s e) (throw state e))
      )))
 
 
@@ -490,7 +490,7 @@
 ;--------------------
 
 ;__________TESTS_____________
-(interpret "functiontest16.txt")
+;(interpret "functiontest16.txt")
 'ETest21
 (eq? (interpret "etest21.txt") 30)
 'ETest22
@@ -612,9 +612,9 @@
 'Test14
 (eq? (interpret "functiontest14.txt") 69)
 'Test15
-(interpret "functiontest15.txt")
+(eq? (interpret "functiontest15.txt") 87)
 'Test16
-;(interpret "functiontest16.txt")
+(eq? (interpret "functiontest16.txt") 64)
 'Test17
 ;This correctly throughs a notdeclarederror
 ;(interpret "functiontest17.txt")
