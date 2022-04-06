@@ -491,7 +491,99 @@
 ;--------------------
 
 ;__________TESTS_____________
-;(interpret2 "functiontesteasy1.txt")
+(interpret "functiontest16.txt")
+'ETest21
+(eq? (interpret "etest21.txt") 30)
+'ETest22
+(eq? (interpret "etest22.txt") 11)
+'ETest23
+(eq? (interpret "etest23.txt") 1106)
+'ETest24
+(eq? (interpret "etest24.txt") 12)
+'ETest25
+(eq? (interpret "etest25.txt") 16)
+'ETest26
+(eq? (interpret "etest26.txt") 72)
+'ETest27
+(eq? (interpret "etest27.txt") 21)
+'ETest28
+(eq? (interpret "etest28.txt") 164)
+'EFlowTest20
+(eq? (interpret "eflowtest20.txt") 21)
+
+
+
+
+'(end etests)
+'Test1
+(eq? (interpret "test1.txt") 150)
+'Test2
+(eq? (interpret "test2.txt") -4)
+'Test3
+(eq? (interpret "test3.txt") 10)
+'Test4
+(eq? (interpret "test4.txt") 16)
+'Test5
+(eq? (interpret "test5.txt") 220)
+'Test6
+(eq? (interpret  "test6.txt") 5)
+'Test7
+(eq? (interpret  "test7.txt") 6)
+'Test8
+(eq? (interpret  "test8.txt") 10)
+'Test9
+(eq? (interpret  "test9.txt") 5)
+'Test10
+(eq? (interpret  "test10.txt") -39)
+;(interpret  "test11.txt")
+;(interpret  "test12.txt")
+;(interpret  "test13.txt")
+;(interpret  "test14.txt")
+'Test15
+(eq? (interpret  "test15.txt") 'true)
+'Test16
+(eq? (interpret  "test16.txt") 100);
+'Test17
+(eq? (interpret  "test17.txt") 'false)
+'Test18
+(eq? (interpret  "test18.txt") 'true)
+'Test19
+(eq? (interpret  "test19.txt") 128)
+'Test20
+(eq? (interpret  "test20.txt") 12)
+'Flowtest1
+(eq? (interpret "flowtest1.txt") 20)
+'Flowtest2
+(eq? (interpret "flowtest2.txt") 164)
+'Flowtest3
+(eq? (interpret "flowtest3.txt") 32)
+'Flowtest4
+(eq? (interpret "flowtest4.txt") 2)
+;(interpret "flowtest5.txt") ;error
+'Flowtest6
+(eq? (interpret "flowtest6.txt") 25)
+'Flowtest7
+(eq? (interpret "flowtest7.txt") 21)
+'Flowtest8
+(eq? (interpret "flowtest8.txt") 6)
+'Flowtest9
+(eq? (interpret "flowtest9.txt") -1)
+'Flowtest10
+(eq? (interpret "flowtest10.txt") 789)
+
+;(eq? (interpret "flowtest11.txt") 'error)
+;(interpret "flowtest12.txt") error
+;(interpret "flowtest13.txt") error
+'Flowtest14
+(eq? (interpret "flowtest14.txt") 12)
+'Flowtest15
+(eq? (interpret "flowtest15.txt") 125)
+'Flowtest16
+(eq? (interpret "flowtest16.txt") 110)
+'Flowtest17
+(eq? (interpret "flowtest17.txt") 2000400)
+'Flowtest18
+(eq? (interpret "flowtest18.txt") 101)
 'Test1
 (eq? (interpret "functiontest1.txt") 10)
 'Test2

@@ -1,3 +1,5 @@
-var z;
-z = 10;
-return z;
+function main () {
+    var z;
+    z = 10;
+    return z;
+}
