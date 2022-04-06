@@ -109,7 +109,6 @@
 (define addclosure
   (lambda (lis state next)
     (cond
-      ;[(eq? (functionname lis) 'main) (next (cons (newlayer) state))]
       [(next (adddeclare (functionname lis) (list (formalparameters lis) (functionbody lis) 1) state))]))) ;need to add part 3 of closure
 
 (define getscope
@@ -189,7 +188,7 @@
   (lambda (lis state next break continue return throw)
     (cond
       [(isdeclared lis (cons (currentlayer state) (emptylist))) (error 'redeclarederror)] 
-      [(isnovaluetoassign lis)(next (add (inputvariable lis) 'declared state))]
+      [(isnovaluetoassign lis)(next (adddeclare (inputvariable lis) 'declared state))]
       [else (next (adddeclare (inputvariable lis) (mvalue (valuetoassign lis) state (lambda (v) v) throw) state)) ]
      )))
 
