@@ -25,7 +25,7 @@
       [(eq? (operator lis) '-) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (- v1 v2))) throw)) throw)]
       [(eq? (operator lis) '/) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (quotient v1 v2))) throw)) throw)]
       [(eq? (operator lis) '%) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (modulo v1 v2))) throw)) throw)]
-      [(eq? (operator lis) '=) (next (begin (add (firstexpression lis) (mvalue (secondexpression lis) state next throw) state) (mvalue (secondexpression lis) state next throw)))]
+      [(eq? (operator lis) '=) (next (begin (add (firstexpression lis) (mvalue (secondexpression lis) state (lambda (v) v) throw) state) (mvalue (secondexpression lis) state (lambda (v) v) throw)))]
       [(eq? (operator lis) '==) (mboolean lis state next throw)]
       [(eq? (operator lis) '!=) (mboolean lis state next throw)]
       [(eq? (operator lis) '<) (mboolean lis state next throw)]
@@ -390,15 +390,24 @@
 ;--------------------
 
 ;__________TESTS_____________
+'ETest21
 (eq? (interpret "etest21.txt") 30)
-;(eq? (interpret "etest22.txt") 11)
-;(eq? (interpret "etest23.txt") 1106)
-;(eq? (interpret "etest24.txt") 12)
-;(eq? (interpret "etest25.txt") 16)
-;(eq? (interpret "etest26.txt") 72)
-;(eq? (interpret "etest27.txt") 21)
-;(eq? (interpret "etest28.txt") 164)
-;(eq? (interpret "eflowtest20.txt") 21)
+'ETest22
+(eq? (interpret "etest22.txt") 11)
+'ETest23
+(eq? (interpret "etest23.txt") 1106)
+'ETest24
+(eq? (interpret "etest24.txt") 12)
+'ETest25
+(eq? (interpret "etest25.txt") 16)
+'ETest26
+(eq? (interpret "etest26.txt") 72)
+'ETest27
+(eq? (interpret "etest27.txt") 21)
+'ETest28
+(eq? (interpret "etest28.txt") 164)
+'EFlowTest20
+(eq? (interpret "eflowtest20.txt") 21)
 
 
 
