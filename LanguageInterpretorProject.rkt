@@ -91,7 +91,7 @@
 (define addclosure
   (lambda (lis state next)
     (cond
-      [(eq? (functionname lis) 'main) (next state)]
+      [(eq? (functionname lis) 'main) (next (cons (newlayer) state))]
       [(next (adddeclare (functionname lis) (list (formalparameters lis) (functionbody lis) 1) state))]))) ;need to add part 3 of closure
 
 (define getscope
@@ -127,7 +127,7 @@
   (lambda (lis state next return throw)
     (mstate
      (bodyfromclosure (get (functionname lis) state));body
-     (bindparams (paramsfromclosure (get (functionname lis) state)) (paramsfromcall lis) (cons (newlayer) (getscope (functionname lis) state)) next return throw)
+     (bindparams (paramsfromclosure (get (functionname lis) state)) (paramsfromcall lis) (cons (newlayer) (getscope (functionname lis) state)) state next return throw)
      (lambda (s) (next s))
      (lambda (s) (error 'breakoutsideloop))
      (lambda (s) (error 'continueoutsideloop))
@@ -137,11 +137,11 @@
 
 
 (define bindparams
-  (lambda (formal actual state next return throw)
+  (lambda (formal actual environment state next return throw)
     (cond
-      [(and (null? formal) (null? actual)) state]
+      [(and (null? formal) (null? actual)) environment]
       [(or (null? formal) (null? actual)) (error 'mismatchparams)]
-      [else (bindparams (cdr formal) (cdr actual) (adddeclare (car formal) (mvalue (car actual) (nextlayers state) next return throw) state) next return throw)])))
+      [else (bindparams (cdr formal) (cdr actual) (adddeclare (car formal) (mvalue (car actual) state next return throw) environment) state next return throw)])))
     
 
 ; gets the value of a variable
@@ -178,7 +178,7 @@
     (cond
       [(eq? (mvalue (operatorcdr lis) state next return throw) #t) (adddeclare 'return 'true state)]
       [(eq? (mvalue (operatorcdr lis) state next return throw) #f) (adddeclare 'return 'false state)]
-      [else (mstate (operatorcdr lis) state (lambda (v) (adddeclare 'return (mvalue (operatorcdr lis) v next return throw) v)) break continue return throw)]
+      [else (adddeclare 'return (mvalue (operatorcdr lis) state next return throw) state)]
     )))
 
 ; executes an if statement (no side effects)
@@ -464,16 +464,17 @@
 ;__________TESTS_____________
 (interpret "functiontesteasy1.txt")
 'Test1
-(eq? (interpret "functiontest1.txt") 10)
+;(eq? (interpret "functiontest1.txt") 10)
 'Test2
-(eq?(interpret "functiontest2.txt") 14)
+;(eq?(interpret "functiontest2.txt") 14)
 'Test3
-(eq? (interpret "functiontest3.txt") 45)
+;(eq? (interpret "functiontest3.txt") 45)
 'Test4
-;(eq? (interpret "functiontest4.txt") 55)
+(eq? (interpret "functiontest4.txt") 55)
 'Test5
-;(eq? (interpret "functiontest5.txt") 1)
-;(interpret "functiontest6.txt")
+(eq? (interpret "functiontest5.txt") 1)
+'Test6
+(eq? (interpret "functiontest6.txt") 115)
 'Test7
 (eq? (interpret "functiontest7.txt") 'true)
 'Test8
@@ -487,11 +488,11 @@
 'Test12CorrectlyThrowsError
 ;(interpret "functiontest12.txt")
 'Test13
-(interpret "functiontest13.txt")
+(eq? (interpret "functiontest13.txt") 90)
 'Test14
 (eq? (interpret "functiontest14.txt") 69)
 'Test15
-;(interpret "functiontest15.txt")
+(interpret "functiontest15.txt")
 'Test16
 ;(interpret "functiontest16.txt")
 'Test17
@@ -500,7 +501,7 @@
 'Test18
 (eq? (interpret "functiontest18.txt") 125)
 'Test19
-(interpret "functiontest19.txt")
+;(interpret "functiontest19.txt")
 'Test20
-(interpret "functiontest20.txt")
+;(interpret "functiontest20.txt")
 
