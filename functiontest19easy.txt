@@ -1,0 +1,22 @@
+function divide(x, y) {
+	var z = 3;
+	function two(){
+	 	throw y;
+	}
+    	two();
+}
+
+function main() {
+  var x = 0;
+
+  try {
+    var o= divide(10, 5);
+  }
+  catch(e) {
+    x = e;
+  }
+  finally {
+    x = x + 100;
+  }
+  return x;
+}

@@ -1,4 +1,4 @@
-import Graphics.Win32 (vK_DIVIDE)
+import Graphics.Win32 (vK_DIVIDE, vK_ACCEPT)
 {- When  you  create  the  closure, you  just  mark  what  variables  are  in  scope-}
 {- You  don't  have  to  store  a  function  to  tell  what's  in  scope -}
 {- Haskell exercise next week -}
@@ -44,4 +44,19 @@ height (InnerNode a l r) = max (1 + height l) (1 + height r)
 --write a function to add an element to the branch with the least height
 addbalanced v Empty = Leaf v
 addbalanced v (Leaf a) = InnerNode a Empty (Leaf v)
-addbalanced v (InnerNode a l r) = 
+addbalanced v (InnerNode a l r) 
+    | height l < height r = InnerNode a (addbalanced v l) r
+    | otherwise           = InnerNode a l (addbalanced v r)
+
+{-
+    foldinorder: a "higher order function" that takes an input a function, an intial value, and a tree. It calculates the function every node of the tree, in order, we 
+    will use the current node as the left operand and the current value as the right operand
+-}
+foldinorder f v Empty = v
+foldinorder f v (Leaf a) = f a v
+foldinorder f v (InnerNode a l r) = foldinorder f (f a (foldinorder f v l)) r 
+
+--apply2tree takes a function and a tree and applies the function to all elements of the tree
+apply2tree f Empty = Empty
+apply2tree f (Leaf a) = Leaf (f a)
+apply2tree ...
