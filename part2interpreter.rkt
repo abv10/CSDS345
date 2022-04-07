@@ -5,10 +5,6 @@
 (require "functionParser.rkt")
 
 ;_______The ENTRY POINT TO INTERPRETING THE PROGRAM________
-(define interpret2
-  (lambda (filename)
-    (get 'return (mstate (parser filename) (initialstate) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (s) s) 'throw))))
-
 (define interpret
   (lambda (filename)
     (runmain (addglobal (parser filename) (initialstate) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (s) s) 'throw) (lambda (v) v) (lambda (v) v) 'throw)))
@@ -20,6 +16,8 @@
       [(number? lis) (next lis)]
       [(boolean? lis) (next lis)]
       [(eq? lis 'true) (next #t)]
+      [(eq? lis #t) (next #t)]
+      [(eq? lis #f) (next #f)]
       [(eq? lis 'false) (next #f)]
       [(and (atom? lis) (eq? (get lis state) 'declared)) (next (error 'notassignederror))]
       [(atom? lis) (next (get lis state))]
@@ -51,6 +49,7 @@
       [(eq? lis 'true) (next #t)]
       [(eq? lis 'false) (next #f)]
       [(atom? lis) (next (get lis state))]
+      [(eq? (operator lis) 'funcall) (next (get 'return (runfunction lis state (lambda (v) v) (lambda (v) v) throw)))] ; NEW
       [(eq? (operator lis) '==) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (eq? v1 v2))) throw)) throw)]
       [(eq? (operator lis) '!=) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (not (eq? v1 v2)))) throw)) throw)]
       [(eq? (operator lis) '<) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (< v1 v2))) throw)) throw)]
@@ -75,7 +74,6 @@
       [(eq? (operator lis) '=) (assign lis state next break continue return throw)]
       [(eq? (operator lis) 'return) (returnfunction lis state next break continue return throw)]
       [(and (eq? (operator lis) 'function)(not (eq? (functionname lis) 'main))) (addclosure lis state next)] ;new
-      [(and (eq? (operator lis) 'function)(eq? (functionname lis) 'main)) (mstate (cadddr lis) (addclosure lis state next) next break continue return throw)] ;new
       [(eq? (operator lis) 'if) (ifstatement lis state next break continue return throw)]
       [(eq? (operator lis) 'while) (whileloop lis state next (lambda (v) (next (nextlayers v))) continue return throw)]
       [(eq? (operator lis) 'break) (break state)]
@@ -88,6 +86,7 @@
       [else (next state)]
     )))
 
+;---Adds all global variables and functions to the state---- Run before calling the main function
 (define addglobal
   (lambda (lis state next break continue return throw)
     (cond
@@ -98,18 +97,14 @@
        [else (next state)]
        )))
 
-
-       
-
-       
-
-
 ;Add Function Closure to State
-;need to add formal parameters, the body and what is in scope
+;need to add formal parameters, the body
+;Note, to determine what is in scope we just look at the functionname which we are already stored in closure
+;So, closure only has two elements
 (define addclosure
   (lambda (lis state next)
     (cond
-      [(next (adddeclare (functionname lis) (list (formalparameters lis) (functionbody lis) 1) state))]))) ;need to add part 3 of closure
+      [(next (adddeclare (functionname lis) (list (formalparameters lis) (functionbody lis)) state))]))) ;need to add part 3 of closure
 
 (define getscope
   (lambda (functionname state)
@@ -136,6 +131,7 @@
 (define paramsfromclosure
   (lambda (closure)
     (car closure)))
+
 (define paramsfromcall
   (lambda (call)
     (cddr call)))
@@ -145,7 +141,7 @@
   (lambda (state next return throw)
     (get 'return (mstate
      (bodyfromclosure (get 'main state));body
-     (bindparams (paramsfromclosure (get 'main state)) empty (cons (newlayer) (getscope 'main state)) state next return throw)
+     (bindparams (paramsfromclosure (get 'main state)) empty (addstatelayer (getscope 'main state)) state next return throw)
      (lambda (s) (next state))
      (lambda (s) (error 'breakoutsideloop))
      (lambda (s) (error 'continueoutsideloop))
@@ -157,7 +153,7 @@
   (lambda (lis state next return throw)
     (mstate
      (bodyfromclosure (get (functionname lis) state));body
-     (bindparams (paramsfromclosure (get (functionname lis) state)) (paramsfromcall lis) (cons (newlayer) (getscope (functionname lis) state)) state next return throw)
+     (bindparams (paramsfromclosure (get (functionname lis) state)) (paramsfromcall lis) (addstatelayer (getscope (functionname lis) state)) state next return throw)
      (lambda (s) (next state))
      (lambda (s) (error 'breakoutsideloop))
      (lambda (s) (error 'continueoutsideloop))
@@ -171,9 +167,17 @@
     (cond
       [(and (null? formal) (null? actual)) environment]
       [(or (null? formal) (null? actual)) (error 'mismatchparams)]
-      [else (bindparams (cdr formal) (cdr actual) (adddeclare (car formal) (mvalue (car actual) state (lambda (v) v) throw) environment) state next return throw)])))
+      [else (bindparams (remaining formal) (remaining actual) (adddeclare (selected formal) (mvalue (selected actual) state (lambda (v) v) throw) environment) state next return throw)])))
+
+(define remaining
+  (lambda (lis)
+    (cdr lis)))
+(define selected
+  (lambda (lis)
+    (car lis)))
 
 ; gets the value of a variable
+;uses boxes
 (define get
   (lambda (variable state)
     (cond
@@ -187,17 +191,20 @@
 (define declare
   (lambda (lis state next break continue return throw)
     (cond
-      [(isdeclared lis (cons (currentlayer state) (emptylist))) (error 'redeclarederror)] 
+      [(isdeclared lis (current state)) (error 'redeclarederror)] 
       [(isnovaluetoassign lis)(next (adddeclare (inputvariable lis) 'declared state))]
       [else (next (adddeclare (inputvariable lis) (mvalue (valuetoassign lis) state (lambda (v) v) throw) state)) ]
      )))
+;currentlayer
+(define current
+  (lambda (state)
+    (cons (currentlayer state) (emptylist))))
 
 ; assigns a value to a variable
 (define assign
   (lambda (lis state next break continue return throw)
     (if (not (isdeclared lis state))
         (error 'notdeclarederror)
-        ;(mstate (valuetoassign lis) state (lambda (v) (add (inputvariable lis) (mvalue (valuetoassign lis) v) v)) break continue return throw)
         (next (add (inputvariable lis) (mvalue (valuetoassign lis) state (lambda (v) v) throw) state))
     )))
 
@@ -205,8 +212,8 @@
 (define returnfunction
   (lambda (lis state next break continue return throw)
     (cond
-      [(eq? (mvalue (operatorcdr lis) state (lambda (v) v) throw) #t) (add 'return 'true state)]
-      [(eq? (mvalue (operatorcdr lis) state (lambda (v) v) throw) #f) (add 'return 'false state)]
+      [(eq? (mvalue (operatorcdr lis) state (lambda (v) v) throw) #t) (adddeclare 'return 'true state)]
+      [(eq? (mvalue (operatorcdr lis) state (lambda (v) v) throw) #f) (adddeclare 'return 'false state)]
       [else (adddeclare 'return (mvalue (operatorcdr lis) state (lambda (v) v) throw) state)]
     )))
 
@@ -226,17 +233,6 @@
       ((null? lis) state)
       ((mvalue (whilecondition lis) state (lambda (v) v) throw) (mstate (whileloopbody lis) state (lambda (v) (mstate lis v next break continue return throw)) break continue return throw))
       (else (mstate (whilecondition lis) state next break continue return throw)))))
-
-;------TRY CATCH return---------
-;Semantics of try/catch/return
-;mstate try <tryblock> catch (<type> <var>) <catcblock> return <returnblocl>, state, next, break, throw ...)]
-;modify the break, next, and throw continuations to execute the return block first and then execture the contituion
-;---newbreak (lambda (s1) (mstate (return ...) s1, break, break, throw)
-;create a new throw continuation that runs the catch block followed by the return block if the exception is thrown
-;---returncont ;= f(s1) --. Mstate(returnblock, s1, next, break, throw)
-;---mythrow ;= f(e, s1) --> Mstate(<catchblock>, AddBinding(,var>, e, s1), fianlly cont, newbreak, newthrow..)
-;Execute the try block with the new continuations
-;---Mstate(,trybloc>, state, returncont, newbreak, mythrow, ....)
 
 
 ;--------------TRY CATCH--------------------
@@ -315,7 +311,6 @@
       [(and (nonextlayer? state) (emptycurrentlayer? state)) (addvariabletoempty variable value state) ]
       [(emptycurrentlayer? state)(cons (currentlayer state) (addhelper variable value (nextlayers state) declaring))]
       [(rightvariable? variable state)(begin (set-box! (selectedvalue state) value) state)]
-      ;[(rightvariable? variable state)(changevalue variable value state)]
       [else (addnowcurrentlayer (selectedvariable state) (selectedvalue state) (addhelper variable value (remainderofstate state) declaring))]
     )))
 
@@ -490,7 +485,7 @@
 ;--------------------
 
 ;__________TESTS_____________
-;(interpret "functiontest16.txt")
+
 'ETest21
 (eq? (interpret "etest21.txt") 30)
 'ETest22
@@ -509,9 +504,6 @@
 (eq? (interpret "etest28.txt") 164)
 'EFlowTest20
 (eq? (interpret "eflowtest20.txt") 21)
-
-
-
 
 '(end etests)
 'Test1
@@ -595,7 +587,7 @@
 (eq? (interpret "functiontest5.txt") 1)
 'Test6
 (eq? (interpret "functiontest6.txt") 115)
-'Test7
+'FunctionTest7
 (eq? (interpret "functiontest7.txt") 'true)
 'Test8
 (eq? (interpret "functiontest8.txt") 20)
@@ -620,7 +612,3 @@
 ;(interpret "functiontest17.txt")
 'Test18
 (eq? (interpret "functiontest18.txt") 125)
-'Test19
-(interpret "functiontest19.txt")
-'Test20
-(interpret "functiontest20.txt")
