@@ -5,9 +5,54 @@
 (require "classParser.rkt")
 
 ;_______The ENTRY POINT TO INTERPRETING THE PROGRAM________
-(define interpret
+(define interpret2
   (lambda (filename)
     (runmain (addglobal (parser filename) (initialstate) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (s) s) 'throw) (lambda (v) v) (lambda (v) v) 'throw)))
+(define interpret
+  (lambda (filename classname)
+    (createclosure (car (parser filename)) (initialstate) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (s) s) 'throw)
+    ))
+    ;#FILL THIS IN
+
+
+(define createclosure
+  (lambda (lis state next break continue return throw)
+    (adddeclare
+     (classname lis)
+     (list
+      ;superclass
+      (getsuperclassclosure (superclass lis) state)
+      ;methods
+      (getmethods (classbody lis) (initialstate) next break continue return throw)
+      (getinstancevariables (classbody lis) (initialstate) next break continue return throw)
+      )
+     state)))
+
+(define getsuperclassclosure
+  (lambda (name state)
+    (if (eq? '() name)
+        '()
+        (get name state))))
+
+
+(define getmethods
+  (lambda (lis state next break continue return throw)
+    (cond
+       [(null? lis) (next state)]
+       [(list? (operator lis)) (getmethods (operator lis) state (lambda (s) (getmethods (operatorcdr lis) s next break continue return throw)) break continue return throw)]
+       [(eq? (operator lis) 'function) (addfunctionclosure lis state next)]
+       [(eq? (operator lis) 'static-function) (addfunctionclosure lis state next)]
+       [else (next state)]
+       )))
+
+(define getinstancevariables
+  (lambda (lis state next break continue return throw)
+    (cond
+       [(null? lis) (next state)]
+       [(list? (operator lis)) (getinstancevariables (operator lis) state (lambda (s) (getinstancevariables (operatorcdr lis) s next break continue return throw)) break continue return throw)]
+       [(eq? (operator lis) 'var) (declare lis state next break continue return throw)]
+       [else (next state)]
+       )))
 
 ;---------------------MVALUE AND MBOOLEAN FUNCTIONS----------------------
 (define mvalue
@@ -497,3 +542,6 @@
 ;--------------------
 
 ;__________TESTS_____________
+
+(interpret "classtest1.txt" "B")
+
