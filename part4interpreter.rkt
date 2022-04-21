@@ -10,9 +10,16 @@
     (runmain (addglobal (parser filename) (initialstate) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (s) s) 'throw) (lambda (v) v) (lambda (v) v) 'throw)))
 (define interpret
   (lambda (filename classname)
-    (createclosure (car (parser filename)) (initialstate) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (s) s) 'throw)
+    (addallclassclosure (parser filename) (initialstate) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (s) s) 'throw)
     ))
     ;#FILL THIS IN
+(define addallclassclosure
+  (lambda (lis state next break continue return throw)
+    (cond
+      ((null? lis) (next state))
+      [(list? (operator lis)) (createclosure (operator lis) state (lambda (s) (addallclassclosure (cdr lis) s next break continue return throw)) break continue return throw)]
+      [else (next state)]))
+  )
 
 
 (define createclosure
@@ -23,8 +30,8 @@
       ;superclass
       (getsuperclassclosure (superclass lis) state)
       ;methods
-      (getmethods (classbody lis) (initialstate) next break continue return throw)
-      (getinstancevariables (classbody lis) (initialstate) next break continue return throw)
+      (getmethods (classbody lis) (initialstate) next break continue return throw) ;;NEED TO UPDATE THIS IF THERE'S NO SUPER CLASS (START WITH DIFFERENT STATE)
+      (getinstancevariables (classbody lis) (initialstate) next break continue return throw) ;;SAME AS ABOVE
       )
      state)))
 
