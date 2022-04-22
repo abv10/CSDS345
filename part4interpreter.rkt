@@ -10,8 +10,8 @@
     (runmain (addglobal (parser filename) (initialstate) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (s) s) 'throw) (lambda (v) v) (lambda (v) v) 'throw)))
 (define interpret
   (lambda (filename classname)
-    (addallclassclosure (parser filename) (initialstate) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (s) s) 'throw)
-    ))
+    (executemain (addallclassclosure (parser filename) (initialstate) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (s) s) 'throw) classname)))
+    
     ;#FILL THIS IN
 (define addallclassclosure
   (lambda (lis state next break continue return throw)
@@ -20,6 +20,10 @@
       [(list? (operator lis)) (createclosure (operator lis) state (lambda (s) (addallclassclosure (cdr lis) s next break continue return throw)) break continue return throw)]
       [else (next state)]))
   )
+
+(define executemain
+  (lambda (state name)
+    (get 'return (mstate (get 'main (getmethodsfromclosure name state)) (initialstate) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (v) v)  'throw))))
 
 (define createclosure
   (lambda (lis state next break continue return throw)
@@ -579,6 +583,6 @@
 ;__________TESTS_____________
 ;(interpret "classtest1.txt" "A")
 
-(interpret "classtest7.txt" "C")
+(interpret "simpleclasstest1.txt" 'A)
 
 
