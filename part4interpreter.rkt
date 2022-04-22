@@ -23,7 +23,7 @@
 
 (define executemain
   (lambda (state name)
-    (get 'return (mstate (get 'main (getmethodsfromclosure name state)) (initialstate) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (v) v)  'throw))))
+    (mstate (get 'main (getmethodsfromclosure name state)) (addstatelayer state) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (v) v)  'throw)))
 
 (define createclosure
   (lambda (lis state next break continue return throw)
@@ -293,11 +293,12 @@
 ; uses the return continuation to stop code execution
 (define returnfunction
   (lambda (lis state next break continue return throw)
+    (let ([result (mvalue (operatorcdr lis) state (lambda (v) v) throw)])
     (cond
-      [(eq? (mvalue (operatorcdr lis) state (lambda (v) v) throw) #t) (adddeclare 'return 'true state)]
-      [(eq? (mvalue (operatorcdr lis) state (lambda (v) v) throw) #f) (adddeclare 'return 'false state)]
-      [else (adddeclare 'return (mvalue (operatorcdr lis) state (lambda (v) v) throw) state)]
-    )))
+      [(number? result) (return result)]
+      [result (return 'true)]
+      [else (return 'false)]
+    ))))
 
 ; executes an if statement (no side effects)
 (define ifstatement
