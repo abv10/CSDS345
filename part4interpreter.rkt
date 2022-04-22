@@ -21,19 +21,37 @@
       [else (next state)]))
   )
 
-
 (define createclosure
   (lambda (lis state next break continue return throw)
-    (adddeclare
+    (next (adddeclare
      (classname lis)
      (list
       ;superclass
       (getsuperclassclosure (superclass lis) state)
       ;methods
-      (getmethods (classbody lis) (initialstate) next break continue return throw) ;;NEED TO UPDATE THIS IF THERE'S NO SUPER CLASS (START WITH DIFFERENT STATE)
-      (getinstancevariables (classbody lis) (initialstate) next break continue return throw) ;;SAME AS ABOVE
+      (getmethods (classbody lis) (getsuperclassmethods (superclass lis) state) (lambda (s) s) break continue return throw) ;;NEED TO UPDATE THIS IF THERE'S NO SUPER CLASS (START WITH DIFFERENT STATE)
+      (getinstancevariables (classbody lis) (getsuperclassfields (superclass lis) state) (lambda (s) s) break continue return throw) ;;SAME AS ABOVE
       )
-     state)))
+     state))))
+
+(define getsuperclassmethods
+  (lambda (name state)
+    (cond
+      [(null? (getsuperclassclosure name state)) (initialstate)]
+      [else (getmethodsfromclosure name state)])))
+(define getsuperclassfields
+  (lambda (name state)
+    (cond
+      [(null? (getsuperclassclosure name state)) (initialstate)]
+      [else (getvariablesfromclosure name state)])))
+
+(define getmethodsfromclosure
+  (lambda (name state)
+    (cadr (getsuperclassclosure name state))))
+
+(define getvariablesfromclosure
+  (lambda (name state)
+    (caddr (getsuperclassclosure name state))))
 
 (define getsuperclassclosure
   (lambda (name state)
@@ -57,7 +75,7 @@
     (cond
        [(null? lis) (next state)]
        [(list? (operator lis)) (getinstancevariables (operator lis) state (lambda (s) (getinstancevariables (operatorcdr lis) s next break continue return throw)) break continue return throw)]
-       [(eq? (operator lis) 'var) (declare lis state next break continue return throw)]
+       [(eq? (operator lis) 'var) (classdeclare lis state next break continue return throw)]
        [else (next state)]
        )))
 
@@ -239,11 +257,19 @@
       [else (get variable (remainderofstate state))]
     )))
 
-; declares a variable. Format: (declare '(var x 5) state)
 (define declare
   (lambda (lis state next break continue return throw)
+    (declarehelper lis state next break continue return throw #f)))
+
+(define classdeclare
+  (lambda (lis state next break continue return throw)
+    (declarehelper lis state next break continue return throw #t)))
+     
+; declares a variable. Format: (declare '(var x 5) state)
+(define declarehelper
+  (lambda (lis state next break continue return throw classdeclare)
     (cond
-      [(isdeclared lis (current state)) (error 'redeclarederror)] 
+      [(and (not classdeclare) (isdeclared lis (current state))) (error 'redeclarederror)] 
       [(isnovaluetoassign lis)(next (adddeclare (inputvariable lis) 'declared state))]
       [else (next (adddeclare (inputvariable lis) (mvalue (valuetoassign lis) state (lambda (v) v) throw) state)) ]
      )))
@@ -540,7 +566,9 @@
 
 (define superclass
   (lambda (lis)
-    (caddr lis)))
+    (cond
+      ((null? (caddr lis)) '())
+      (else (cadr (caddr lis))))))
 
 (define classbody
   (lambda (lis)
@@ -549,6 +577,8 @@
 ;--------------------
 
 ;__________TESTS_____________
+;(interpret "classtest1.txt" "A")
 
-(interpret "classtest1.txt" "B")
+(interpret "classtest7.txt" "C")
+
 
