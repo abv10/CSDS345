@@ -38,6 +38,13 @@
       )
      state))))
 
+;GET THE CLASS NAME AND FIELD VARIABLES VALUES
+(define createinstance
+  (lambda (lis state next throw)
+    (next (list (firstexpression lis) (cadr (getvariablesfromclosure (get (firstexpression lis) state)))))))
+
+
+
 (define getsuperclassmethods
   (lambda (name state)
     (cond
@@ -95,6 +102,8 @@
       [(eq? lis 'false) (next #f)]
       [(and (atom? lis) (eq? (get lis state) 'declared)) (next (error 'notassignederror))]
       [(atom? lis) (next (get lis state))]
+      [(eq? (operator lis) 'new) (createinstance lis state next throw)]
+      [(eq? (operator lis) 'dot) (executedot lis state next throw)]
       [(and (eq? (operator lis) '-)(null? (firstexpressioncdr lis))) (mvalue (firstexpression lis) state (lambda (v) (next (- v))) throw)]
       [(eq? (operator lis) '*) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (* v1 v2))) throw)) throw)]
       [(eq? (operator lis) '+) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (+ v1 v2))) throw)) throw)]
@@ -582,7 +591,7 @@
 ;--------------------
 
 ;__________TESTS_____________
-;(interpret "classtest1.txt" "A")
+(parser "classtest1.txt")
 
 (interpret "simpleclasstest1.txt" 'A)
 
