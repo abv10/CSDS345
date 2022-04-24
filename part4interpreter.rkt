@@ -137,7 +137,7 @@
       [(eq? (operator lis) '!) (mboolean lis state next throw)]
       [(eq? (operator lis) '||) (mboolean lis state next throw)]
       [(eq? (operator lis) '&&) (mboolean lis state next throw)]
-      [(eq? (operator lis) 'funcall) (next (get 'return (runfunction lis state (lambda (v) v) (lambda (v) v) throw)))] ; NEW
+      [(eq? (operator lis) 'funcall) (next (runfunction lis state (lambda (v) v) (lambda (v) v) throw))] ; NEW
       [(null? (operatorcdr lis)) (mvalue (operator lis) state next throw)]
       )))
 
@@ -149,7 +149,7 @@
       [(eq? lis 'true) (next #t)]
       [(eq? lis 'false) (next #f)]
       [(atom? lis) (next (get lis state))]
-      [(eq? (operator lis) 'funcall) (next (get 'return (runfunction lis state (lambda (v) v) (lambda (v) v) throw)))] ; NEW
+      [(eq? (operator lis) 'funcall) (next (runfunction lis state (lambda (v) v) (lambda (v) v) throw))] ; NEW
       [(eq? (operator lis) '==) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (eq? v1 v2))) throw)) throw)]
       [(eq? (operator lis) '!=) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (not (eq? v1 v2)))) throw)) throw)]
       [(eq? (operator lis) '<) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (< v1 v2))) throw)) throw)]
@@ -239,7 +239,7 @@
 ;Add Function Call
 (define runmain
   (lambda (state next return throw)
-    (get 'return (mstate
+    (mstate
      (bodyfromclosure (get 'main state));body
      (bindparams (paramsfromclosure (get 'main state)) empty (addstatelayer (getscope 'main state)) state next return throw)
      (lambda (s) (next state))
@@ -247,7 +247,7 @@
      (lambda (s) (error 'continueoutsideloop))
      (lambda (s) (next state))
      (lambda (s e) (throw state e))
-     ))))
+     )))
 
 (define runfunction
   (lambda (lis state next return throw)
@@ -613,7 +613,7 @@
 ;__________TESTS_____________
 (parser "classtest1.txt")
 
-(interpret "classtest1.txt" 'A)
+(interpret "simpleclasstest3.txt" 'A)
 (interpret "simpleclasstest1.txt" 'A)
 
 
