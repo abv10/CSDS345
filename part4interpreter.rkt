@@ -49,7 +49,7 @@
       ;superclass
       (getsuperclassclosure (superclass lis) state)
       ;methods
-      (getmethods (classbody lis) (getsuperclassmethods (superclass lis) state) (lambda (s) s) break continue return throw) ;;NEED TO UPDATE THIS IF THERE'S NO SUPER CLASS (START WITH DIFFERENT STATE)
+      (getmethods (classbody lis) (getsuperclassmethods (superclass lis) state) (lambda (s) s) break continue return throw (classname lis)) ;;NEED TO UPDATE THIS IF THERE'S NO SUPER CLASS (START WITH DIFFERENT STATE)
       (getinstancevariables (classbody lis) (getsuperclassfields (superclass lis) state) (lambda (s) s) break continue return throw) ;;SAME AS ABOVE
       )
      state))))
@@ -89,12 +89,12 @@
 
 
 (define getmethods
-  (lambda (lis state next break continue return throw)
+  (lambda (lis state next break continue return throw classname)
     (cond
        [(null? lis) (next state)]
-       [(list? (operator lis)) (getmethods (operator lis) state (lambda (s) (getmethods (operatorcdr lis) s next break continue return throw)) break continue return throw)]
-       [(eq? (operator lis) 'function) (addfunctionclosure lis state next)]
-       [(eq? (operator lis) 'static-function) (addfunctionclosure lis state next)]
+       [(list? (operator lis)) (getmethods (operator lis) state (lambda (s) (getmethods (operatorcdr lis) s next break continue return throw classname)) break continue return throw classname)]
+       [(eq? (operator lis) 'function) (addfunctionclosure lis state next classname)]
+       [(eq? (operator lis) 'static-function) (addfunctionclosure lis state next classname)]
        [else (next state)]
        )))
 
@@ -202,9 +202,9 @@
 ;Note, to determine what is in scope we just look at the functionname which we are already stored in closure
 ;So, closure only has two elements
 (define addfunctionclosure
-  (lambda (lis state next)
+  (lambda (lis state next classname)
     (cond
-      [(next (adddeclare (functionname lis) (list (formalparameters lis) (functionbody lis)) state))]))) ;need to add part 3 of closure
+      [(next (adddeclare (functionname lis) (list (formalparameters lis) (functionbody lis) classname) state))]))) ;need to add part 3 of closure
 
 (define getscope
   (lambda (functionname state)
@@ -251,17 +251,48 @@
 
 (define runfunction
   (lambda (lis state next return throw)
-    (mstate
-     (bodyfromclosure (get (functionname lis) state));body
-     (bindparams (paramsfromclosure (get (functionname lis) state)) (paramsfromcall lis) (addstatelayer (getscope (functionname lis) state)) state next return throw)
-     (lambda (s) (next state))
-     (lambda (s) (error 'breakoutsideloop))
-     (lambda (s) (error 'continueoutsideloop))
-     (lambda (s) (next state))
-     (lambda (s e) (throw state e))
-     )))
+    (cond
+      [(list? (functionname lis))
+       (mstate
+        (bodyfromclosure (getdotfunction (cadr lis) state))
+        (bindparams (paramsfromclosure (getdotfunction (cadr lis) state))(paramsfromcall lis) (addstatelayer state) state next return throw)
+        (lambda (s) (next state))
+        (lambda (s) (error 'breakoutsideloop))
+        (lambda (s) (error 'continueoutsideloop))
+        (lambda (s) (next state))
+        (lambda (s e) (throw state e))
+        )]
+      [else
+       (mstate
+        (bodyfromclosure (get (functionname lis) state));body
+        (bindparams (paramsfromclosure (get (functionname lis) state)) (paramsfromcall lis) (addstatelayer (getscope (functionname lis) state)) state next return throw)
+        (lambda (s) (next state))
+        (lambda (s) (error 'breakoutsideloop))
+        (lambda (s) (error 'continueoutsideloop))
+        (lambda (s) (next state))
+        (lambda (s e) (throw state e))
+     )]
+      )))
+
+;Get the instance name --> get the class of the instance --> get the method from that class
+(define getdotfunction
+  (lambda (lis state)
+    (get (methodname lis) (cadr (get (classofinstance (get (instancename lis) state)) state)))))
 
 
+(define classofinstance
+  (lambda (lis)
+    (car lis)))
+
+                     
+(define instancename
+  (lambda (lis)
+    (cadr lis)))
+
+(define methodname
+  (lambda (lis)
+    (caddr lis)))
+     
 (define bindparams
   (lambda (formal actual environment state next return throw)
     (cond
@@ -611,7 +642,7 @@
 ;--------------------
 
 ;__________TESTS_____________
-(parser "classtest1.txt")
+;(parser "classtest1.txt")
 
 (interpret "simpleclasstest3.txt" 'A)
 (interpret "simpleclasstest1.txt" 'A)
