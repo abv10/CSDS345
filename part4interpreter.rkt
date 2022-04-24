@@ -15,7 +15,18 @@
 
 (define executedot
   (lambda (lis state next throw)
-    '()))
+    '()
+    ))
+
+; gets the index of a variable. used to match variables between class and instance closures
+; (getvariableindex 'x '(a b c d x e f) 0) => 4
+(define getvariableindex
+  (lambda (name variables index)
+    (cond
+      [(null? variables) (error 'notdeclared)]
+      [(eq? name (car variables)) index]
+      [else (getvariableindex name (cdr variables) (+ index 1))]
+   )))
 
     ;#FILL THIS IN
 (define addallclassclosure
@@ -46,7 +57,7 @@
 ;GET THE CLASS NAME AND FIELD VARIABLES VALUES
 (define createinstance
   (lambda (lis state next throw)
-    (next (list (firstexpression lis) (cadar (getvariablesfromclosure (firstexpression lis) state))))))
+    (next (list (firstexpression lis) (reverse (cadar (getvariablesfromclosure (firstexpression lis) state)))))))
 
 
 
@@ -55,6 +66,7 @@
     (cond
       [(null? (getsuperclassclosure name state)) (initialstate)]
       [else (getmethodsfromclosure name state)])))
+
 (define getsuperclassfields
   (lambda (name state)
     (cond
@@ -601,6 +613,7 @@
 ;__________TESTS_____________
 (parser "classtest1.txt")
 
+(interpret "classtest1.txt" 'A)
 (interpret "simpleclasstest1.txt" 'A)
 
 
