@@ -11,7 +11,12 @@
 (define interpret
   (lambda (filename classname)
     (executemain (addallclassclosure (parser filename) (initialstate) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (s) s) 'throw) classname)))
-    
+
+
+(define executedot
+  (lambda (lis state next throw)
+    '()))
+
     ;#FILL THIS IN
 (define addallclassclosure
   (lambda (lis state next break continue return throw)
@@ -41,7 +46,7 @@
 ;GET THE CLASS NAME AND FIELD VARIABLES VALUES
 (define createinstance
   (lambda (lis state next throw)
-    (next (list (firstexpression lis) (cadr (getvariablesfromclosure (get (firstexpression lis) state)))))))
+    (next (list (firstexpression lis) (cadar (getvariablesfromclosure (firstexpression lis) state))))))
 
 
 
@@ -305,8 +310,11 @@
     (let ([result (mvalue (operatorcdr lis) state (lambda (v) v) throw)])
     (cond
       [(number? result) (return result)]
-      [result (return 'true)]
-      [else (return 'false)]
+      [(eq? result #t) (return 'true)]
+      [(eq? result 'true) (return 'true)]
+      [(eq? result #f) (return 'false)]
+      [(eq? result 'false) (return 'false)]
+      [else (return result)]
     ))))
 
 ; executes an if statement (no side effects)
