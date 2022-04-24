@@ -259,7 +259,7 @@
         (lambda (s) (next state))
         (lambda (s) (error 'breakoutsideloop))
         (lambda (s) (error 'continueoutsideloop))
-        (lambda (s) (next state))
+        (lambda (s) s)
         (lambda (s e) (throw state e))
         classname
         )]
