@@ -255,7 +255,7 @@
       [(list? (functionname lis))
        (mstate
         (bodyfromclosure (getdotfunction (cadr lis) state))
-        (bindparams (paramsfromclosure (getdotfunction (cadr lis) state))(paramsfromcall lis) (addstatelayer state) state next return throw)
+        (bindparams (paramsfromclosure (getdotfunction (cadr lis) state))(paramsfromcall lis) (addstatelayer (getmethodscope lis state)) state next return throw)
         (lambda (s) (next state))
         (lambda (s) (error 'breakoutsideloop))
         (lambda (s) (error 'continueoutsideloop))
@@ -273,7 +273,21 @@
         (lambda (s e) (throw state e))
      )]
       )))
+(define getmethodscope
+  (lambda (lis state)
+    (cons (cadr (get (classofinstance (get (instancename (cadr lis)) state)) state)) (getgloballayer state))))
 
+(define getgloballayer
+  (lambda (state)
+    (cond
+      [(null? (cdr state)) state]
+      [else (getgloballayer (cdr state))])))
+
+       
+(define dotinstanceclosure
+  (lambda (lis state)
+    (get (instancename (cadr lis) state))))
+    
 ;Get the instance name --> get the class of the instance --> get the method from that class
 (define getdotfunction
   (lambda (lis state)
