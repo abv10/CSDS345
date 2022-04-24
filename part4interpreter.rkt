@@ -10,7 +10,7 @@
     (runmain (addglobal (parser filename) (initialstate) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (s) s) 'throw) (lambda (v) v) (lambda (v) v) 'throw)))
 (define interpret
   (lambda (filename classname)
-    (executemain (addallclassclosure (parser filename) (initialstate) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (s) s) 'throw) classname)))
+    (executemain (addallclassclosure (parser filename) (initialstate) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (s) s) 'throw) classname classname)))
 
 
 (define executedot
@@ -38,8 +38,8 @@
   )
 
 (define executemain
-  (lambda (state name)
-    (mstate (get 'main (getmethodsfromclosure name state)) (addstatelayer state) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (v) v)  'throw)))
+  (lambda (state name classname)
+    (mstate (get 'main (getmethodsfromclosure name state)) (addstatelayer state) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (v) v) 'throw classname)))
 
 (define createclosure
   (lambda (lis state next break continue return throw)
@@ -109,7 +109,7 @@
 
 ;---------------------MVALUE AND MBOOLEAN FUNCTIONS----------------------
 (define mvalue
-  (lambda (lis state next throw)
+  (lambda (lis state next throw classname)
     (cond
       [(number? lis) (next lis)]
       [(boolean? lis) (next lis)]
@@ -121,79 +121,79 @@
       [(atom? lis) (next (get lis state))]
       [(eq? (operator lis) 'new) (createinstance lis state next throw)]
       [(eq? (operator lis) 'dot) (executedot lis state next throw)]
-      [(and (eq? (operator lis) '-)(null? (firstexpressioncdr lis))) (mvalue (firstexpression lis) state (lambda (v) (next (- v))) throw)]
-      [(eq? (operator lis) '*) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (* v1 v2))) throw)) throw)]
-      [(eq? (operator lis) '+) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (+ v1 v2))) throw)) throw)]
-      [(eq? (operator lis) '-) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (- v1 v2))) throw)) throw)]
-      [(eq? (operator lis) '/) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (quotient v1 v2))) throw)) throw)]
-      [(eq? (operator lis) '%) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (modulo v1 v2))) throw)) throw)]
-      [(eq? (operator lis) '=) (next (begin (add (firstexpression lis) (mvalue (secondexpression lis) state (lambda (v) v) throw) state) (mvalue (secondexpression lis) state (lambda (v) v) throw)))]
-      [(eq? (operator lis) '==) (mboolean lis state next throw)]
-      [(eq? (operator lis) '!=) (mboolean lis state next throw)]
-      [(eq? (operator lis) '<) (mboolean lis state next throw)]
-      [(eq? (operator lis) '>) (mboolean lis state next throw)]
-      [(eq? (operator lis) '>=) (mboolean lis state next throw)]
-      [(eq? (operator lis) '<=) (mboolean lis state next throw)]
-      [(eq? (operator lis) '!) (mboolean lis state next throw)]
-      [(eq? (operator lis) '||) (mboolean lis state next throw)]
-      [(eq? (operator lis) '&&) (mboolean lis state next throw)]
-      [(eq? (operator lis) 'funcall) (next (runfunction lis state (lambda (v) v) (lambda (v) v) throw))] ; NEW
-      [(null? (operatorcdr lis)) (mvalue (operator lis) state next throw)]
+      [(and (eq? (operator lis) '-)(null? (firstexpressioncdr lis))) (mvalue (firstexpression lis) state (lambda (v) (next (- v))) throw classname)]
+      [(eq? (operator lis) '*) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (* v1 v2))) throw classname)) throw classname)]
+      [(eq? (operator lis) '+) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (+ v1 v2))) throw classname)) throw classname)]
+      [(eq? (operator lis) '-) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (- v1 v2))) throw classname)) throw classname)]
+      [(eq? (operator lis) '/) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (quotient v1 v2))) throw classname)) throw classname)]
+      [(eq? (operator lis) '%) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (modulo v1 v2))) throw classname)) throw classname)]
+      [(eq? (operator lis) '=) (next (begin (add (firstexpression lis) (mvalue (secondexpression lis) state (lambda (v) v) throw classname) state) (mvalue (secondexpression lis) state (lambda (v) v) throw classname)))]
+      [(eq? (operator lis) '==) (mboolean lis state next throw classname)]
+      [(eq? (operator lis) '!=) (mboolean lis state next throw classname)]
+      [(eq? (operator lis) '<) (mboolean lis state next throw classname)]
+      [(eq? (operator lis) '>) (mboolean lis state next throw classname)]
+      [(eq? (operator lis) '>=) (mboolean lis state next throw classname)]
+      [(eq? (operator lis) '<=) (mboolean lis state next throw classname)]
+      [(eq? (operator lis) '!) (mboolean lis state next throw classname)]
+      [(eq? (operator lis) '||) (mboolean lis state next throw classname)]
+      [(eq? (operator lis) '&&) (mboolean lis state next throw classname)]
+      [(eq? (operator lis) 'funcall) (next (runfunction lis state (lambda (v) v) (lambda (v) v) throw classname))] ; NEW
+      [(null? (operatorcdr lis)) (mvalue (operator lis) state next throw classname)]
       )))
 
 ; evaluates boolean expressions.
 (define mboolean
-  (lambda (lis state next throw)
+  (lambda (lis state next throw classname)
     (cond
       [(number? lis) (next lis)]
       [(eq? lis 'true) (next #t)]
       [(eq? lis 'false) (next #f)]
       [(atom? lis) (next (get lis state))]
-      [(eq? (operator lis) 'funcall) (next (runfunction lis state (lambda (v) v) (lambda (v) v) throw))] ; NEW
-      [(eq? (operator lis) '==) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (eq? v1 v2))) throw)) throw)]
-      [(eq? (operator lis) '!=) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (not (eq? v1 v2)))) throw)) throw)]
-      [(eq? (operator lis) '<) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (< v1 v2))) throw)) throw)]
-      [(eq? (operator lis) '>) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (> v1 v2))) throw)) throw)]
-      [(eq? (operator lis) '>=) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (>= v1 v2))) throw)) throw)]
-      [(eq? (operator lis) '<=) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (<= v1 v2))) throw)) throw)]
-      [(eq? (operator lis) '!) (mboolean (firstexpression lis) state (lambda (v) (next (not v))) throw)]
-      [(eq? (operator lis) '||) (mboolean (firstexpression lis) state (lambda (v1) (mboolean (secondexpression lis) state (lambda (v2) (next (or v1 v2))) throw)) throw)]
-      [(eq? (operator lis) '&&) (mboolean (firstexpression lis) state (lambda (v1) (mboolean (secondexpression lis) state (lambda (v2) (next (and v1 v2))) throw)) throw)]
+      [(eq? (operator lis) 'funcall) (next (runfunction lis state (lambda (v) v) (lambda (v) v) throw classname))] ; NEW
+      [(eq? (operator lis) '==) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (eq? v1 v2))) throw classname)) throw classname)]
+      [(eq? (operator lis) '!=) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (not (eq? v1 v2)))) throw classname)) throw classname)]
+      [(eq? (operator lis) '<) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (< v1 v2))) throw classname)) throw classname)]
+      [(eq? (operator lis) '>) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (> v1 v2))) throw classname)) throw classname)]
+      [(eq? (operator lis) '>=) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (>= v1 v2))) throw classname)) throw classname)]
+      [(eq? (operator lis) '<=) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (<= v1 v2))) throw classname)) throw classname)]
+      [(eq? (operator lis) '!) (mboolean (firstexpression lis) state (lambda (v) (next (not v))) throw classname)]
+      [(eq? (operator lis) '||) (mboolean (firstexpression lis) state (lambda (v1) (mboolean (secondexpression lis) state (lambda (v2) (next (or v1 v2))) throw classname)) throw classname)]
+      [(eq? (operator lis) '&&) (mboolean (firstexpression lis) state (lambda (v1) (mboolean (secondexpression lis) state (lambda (v2) (next (and v1 v2))) throw classname)) throw classname)]
       )))
 
 ; -----------------------------MSTATE FUNCTIONS-----------------------------
 ; changes the state
 (define mstate
-  (lambda (lis state next break continue return throw) ; next is the continuation function
+  (lambda (lis state next break continue return throw classname) ; next is the continuation function
     (cond
       [(null? lis) (next state)]
       [(atom? lis) (next state)]
-      [(list? (operator lis)) (mstate (operator lis) state (lambda (s) (mstate (operatorcdr lis) s next break continue return throw)) break continue return throw)]
-      [(eq? (operator lis) 'funcall) (next (runfunction lis state next return throw))] ; new
-      [(eq? (operator lis) 'var) (declare lis state next break continue return throw)]
-      [(eq? (operator lis) '=) (assign lis state next break continue return throw)]
-      [(eq? (operator lis) 'return) (returnfunction lis state next break continue return throw)]
+      [(list? (operator lis)) (mstate (operator lis) state (lambda (s) (mstate (operatorcdr lis) s next break continue return throw classname)) break continue return throw classname)]
+      [(eq? (operator lis) 'funcall) (next (runfunction lis state next return throw classname))] ; new
+      [(eq? (operator lis) 'var) (declare lis state next break continue return throw classname)]
+      [(eq? (operator lis) '=) (assign lis state next break continue return throw classname)]
+      [(eq? (operator lis) 'return) (returnfunction lis state next break continue return throw classname)]
       [(and (eq? (operator lis) 'function)(not (eq? (functionname lis) 'main))) (addfunctionclosure lis state next)] ;new
-      [(eq? (operator lis) 'if) (ifstatement lis state next break continue return throw)]
-      [(eq? (operator lis) 'while) (whileloop lis state next (lambda (v) (next (nextlayers v))) continue return throw)]
+      [(eq? (operator lis) 'if) (ifstatement lis state next break continue return throw classname)]
+      [(eq? (operator lis) 'while) (whileloop lis state next (lambda (v) (next (nextlayers v))) continue return throw classname)]
       [(eq? (operator lis) 'break) (break state)]
       [(eq? (operator lis) 'continue) (continue state)]
-      [(eq? (operator lis) 'begin) (block lis (addstatelayer state) next break continue return throw)]
+      [(eq? (operator lis) 'begin) (block lis (addstatelayer state) next break continue return throw classname)]
       [(and (eq? (operator lis) 'throw) (eq? throw 'throw)) (error 'uncaughtthrow)]
-      [(eq? (operator lis) 'throw) (throw state (mvalue (firstexpression lis) state (lambda (v) v) throw))]
-      [(eq? (operator lis) 'try) (trycatch lis state next break continue return throw)]
-      [(not (null? (operatorcdr lis))) (mstate (operatorcdr lis) state next break continue return throw)] 
+      [(eq? (operator lis) 'throw) (throw state (mvalue (firstexpression lis) state (lambda (v) v) throw classname))]
+      [(eq? (operator lis) 'try) (trycatch lis state next break continue return throw classname)]
+      [(not (null? (operatorcdr lis))) (mstate (operatorcdr lis) state next break continue return throw classname)] 
       [else (next state)]
     )))
 
 ;---Adds all global variables and functions to the state---- Run before calling the main function
 (define addglobal
-  (lambda (lis state next break continue return throw)
+  (lambda (lis state next break continue return throw classname)
     (cond
        [(null? lis) (next state)]
-       [(list? (operator lis)) (addglobal (operator lis) state (lambda (s) (addglobal (operatorcdr lis) s next break continue return throw)) break continue return throw)]
+       [(list? (operator lis)) (addglobal (operator lis) state (lambda (s) (addglobal (operatorcdr lis) s next break continue return throw classname)) break continue return throw classname)]
        [(eq? (operator lis) 'function) (addfunctionclosure lis state next)]
-       [(eq? (operator lis) 'var) (declare lis state next break continue return throw)]
+       [(eq? (operator lis) 'var) (declare lis state next break continue return throw classname)]
        [else (next state)]
        )))
 
@@ -250,7 +250,7 @@
      )))
 
 (define runfunction
-  (lambda (lis state next return throw)
+  (lambda (lis state next return throw classname)
     (cond
       [(list? (functionname lis))
        (mstate
@@ -261,6 +261,7 @@
         (lambda (s) (error 'continueoutsideloop))
         (lambda (s) (next state))
         (lambda (s e) (throw state e))
+        classname
         )]
       [else
        (mstate
@@ -271,6 +272,7 @@
         (lambda (s) (error 'continueoutsideloop))
         (lambda (s) (next state))
         (lambda (s e) (throw state e))
+        classname
      )]
       )))
 (define getmethodscope
@@ -333,20 +335,20 @@
     )))
 
 (define declare
-  (lambda (lis state next break continue return throw)
-    (declarehelper lis state next break continue return throw #f)))
+  (lambda (lis state next break continue return throw classname)
+    (declarehelper lis state next break continue return throw #f classname)))
 
 (define classdeclare
-  (lambda (lis state next break continue return throw)
-    (declarehelper lis state next break continue return throw #t)))
+  (lambda (lis state next break continue return throw classname)
+    (declarehelper lis state next break continue return throw #t classname)))
      
 ; declares a variable. Format: (declare '(var x 5) state)
 (define declarehelper
-  (lambda (lis state next break continue return throw classdeclare)
+  (lambda (lis state next break continue return throw classdeclare classname)
     (cond
       [(and (not classdeclare) (isdeclared lis (current state))) (error 'redeclarederror)] 
       [(isnovaluetoassign lis)(next (adddeclare (inputvariable lis) 'declared state))]
-      [else (next (adddeclare (inputvariable lis) (mvalue (valuetoassign lis) state (lambda (v) v) throw) state)) ]
+      [else (next (adddeclare (inputvariable lis) (mvalue (valuetoassign lis) state (lambda (v) v) throw classname) state)) ]
      )))
 ;currentlayer
 (define current
@@ -355,16 +357,16 @@
 
 ; assigns a value to a variable
 (define assign
-  (lambda (lis state next break continue return throw)
+  (lambda (lis state next break continue return throw classname)
     (if (not (isdeclared lis state))
         (error 'notdeclarederror)
-        (next (add (inputvariable lis) (mvalue (valuetoassign lis) state (lambda (v) v) throw) state))
+        (next (add (inputvariable lis) (mvalue (valuetoassign lis) state (lambda (v) v) throw classname) state))
     )))
 
 ; uses the return continuation to stop code execution
 (define returnfunction
-  (lambda (lis state next break continue return throw)
-    (let ([result (mvalue (operatorcdr lis) state (lambda (v) v) throw)])
+  (lambda (lis state next break continue return throw classname)
+    (let ([result (mvalue (operatorcdr lis) state (lambda (v) v) throw classname)])
     (cond
       [(number? result) (return result)]
       [(eq? result #t) (return 'true)]
@@ -376,48 +378,49 @@
 
 ; executes an if statement (no side effects)
 (define ifstatement
-  (lambda (lis state next break continue return throw)
+  (lambda (lis state next break continue return throw classname)
     (cond
-      [(mvalue (ifcondition lis) state (lambda (v) v) throw) (mstate (thenstatement lis) state next break continue return throw)]
+      [(mvalue (ifcondition lis) state (lambda (v) v) throw classname) (mstate (thenstatement lis) state next break continue return throw classname)]
       [(null? (thenstatementcdr lis)) (next state)]
-      [else (mstate (elsestatement lis) state next break continue return throw)]
+      [else (mstate (elsestatement lis) state next break continue return throw classname)]
     )))
 
 ; while loop (no side effects)
 (define whileloop
-  (lambda (lis state next break continue return throw)
+  (lambda (lis state next break continue return throw classname)
     (cond
       ((null? lis) state)
-      ((mvalue (whilecondition lis) state (lambda (v) v) throw) (mstate (whileloopbody lis) state (lambda (v) (mstate lis v next break continue return throw)) break continue return throw))
+      ((mvalue (whilecondition lis) state (lambda (v) v) throw classname) (mstate (whileloopbody lis) state (lambda (v) (mstate lis v next break continue return throw classname)) break continue return throw classname))
       (else (mstate (whilecondition lis) state next break continue return throw)))))
 
 
 ;--------------TRY CATCH--------------------
 (define trycatch
-  (lambda (lis state next break continue return throw)
+  (lambda (lis state next break continue return throw classname)
       (mstate (trybody lis) state
-                       (lambda (s) (mstate (finallybody lis) s next break continue return throw)) ;newnext
-                       (lambda (s) (mstate (finallybody lis) s break break continue return throw)) ;newbreak
-                       (lambda (s) (mstate (finallybody lis) s continue break 'continue? return throw)) ;newcontinue
+                       (lambda (s) (mstate (finallybody lis) s next break continue return throw classname)) ;newnext
+                       (lambda (s) (mstate (finallybody lis) s break break continue return throw classname)) ;newbreak
+                       (lambda (s) (mstate (finallybody lis) s continue break 'continue? return throw classname)) ;newcontinue
                        (lambda (v) (return v state)) ;newreturn 
                        (lambda (s e) (mstate (catch lis) (add (catchvariable lis) e s) ; mythrow
-                                              (lambda (s) (mstate (finallybody lis) s next break continue return throw)) ;new next
-                                              (lambda (s) (mstate (finallybody lis) s break break continue return throw)) ;newbreak
-                                              (lambda (s) (mstate (finallybody lis) s continue break 'continue? return throw)) ;newcontinue
+                                              (lambda (s) (mstate (finallybody lis) s next break continue return throw classname)) ;new next
+                                              (lambda (s) (mstate (finallybody lis) s break break continue return throw classname)) ;newbreak
+                                              (lambda (s) (mstate (finallybody lis) s continue break 'continue? return throw classname)) ;newcontinue
                                               (lambda (v) (return v state)) ;newreturn
                                               (lambda (s1 e1) (mstate (catch lis) s1
                                                                       (lambda (s2) (throw s2 e1))
                                                                       (lambda (s2) (throw s2 e1))
                                                                       (lambda (s2) (throw s2 e1))
                                                                       (lambda (v) (throw s1 e1))
-                                                                      throw)))))))
+                                                                      throw
+                                                                      classname)))))))
 
 ; block functionality
 (define block
-  (lambda (lis state next break continue return throw)
+  (lambda (lis state next break continue return throw classname)
     (cond
       [(null? lis) (next (nextlayers state))]
-      [else (mstate (operator lis) state (lambda (v) (block (operatorcdr lis) v next break continue return throw)) break (lambda (v) (next v)) return throw)]
+      [else (mstate (operator lis) state (lambda (v) (block (operatorcdr lis) v next break continue return throw classname)) break (lambda (v) (next v)) return throw classname)]
       )))
 
 ;-------------------------HELPER FUNCTIONS--------------------------
