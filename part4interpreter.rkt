@@ -21,6 +21,24 @@
      ))
     ))
 
+
+(define assigndot
+  (lambda (lis state next break continue return throw classname)
+    (next (replaceatindex
+     (getvariableindex (secondexpression lis) (reverse (getinstancefieldnames (classofinstance (get (cadr (firstexpression lis)) state)) state)) 0) ; index of variable
+     (mvalue (secondexpression lis) state next throw classname)
+     (getinstancefieldvalues (get (cadr (firstexpression lis)) state))) ; values of instance fields (ordered oldest --> newest
+     ))
+)
+
+(define replaceatindex
+  (lambda (index newvalue values)
+    (cond
+      [(null? values) (error 'index)]
+      [(zero? index) (begin (set-box! (car values) newvalue) values)]
+      [else (replaceatindex (- index 1) newvalue (cdr values))])))
+           
+    
 ; gets the index of a variable. used to match variables between class and instance closures
 ; (getvariableindex 'x '(a b c d x e f) 0) => 4
 (define getvariableindex
@@ -686,8 +704,9 @@
 ;(parser "classtest1.txt")
 
 ;(interpret "simpleclasstest3.txt" 'A)
-(interpret "classtest1.txt" 'A)
-(interpret "classtest2.txt" 'A)
-(interpret "classtest3.txt" 'A)
+;(interpret "classtest1.txt" 'A)
+;(interpret "classtest2.txt" 'A)
+;(interpret "classtest3.txt" 'A)
 
 
+(parser "classtest4.txt")
