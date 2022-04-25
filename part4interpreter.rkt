@@ -175,7 +175,7 @@
       [(eq? (operator lis) '!) (mboolean lis state next throw classname)]
       [(eq? (operator lis) '||) (mboolean lis state next throw classname)]
       [(eq? (operator lis) '&&) (mboolean lis state next throw classname)]
-      [(eq? (operator lis) 'funcall) (runfunctionexpression lis state (lambda (v) v) (lambda (v) v) throw classname)] ; NEW
+      [(eq? (operator lis) 'funcall) (next (runfunctionexpression lis state (lambda (v) v) (lambda (v) v) throw classname))] ; NEW
       [(null? (operatorcdr lis)) (mvalue (operator lis) state next throw classname)]
       )))
 
@@ -187,7 +187,7 @@
       [(eq? lis 'true) (next #t)]
       [(eq? lis 'false) (next #f)]
       [(atom? lis) (next (get lis state))]
-      [(eq? (operator lis) 'funcall) (runfunctionexpression lis state (lambda (v) v) (lambda (v) v) throw classname)] ; NEW
+      [(eq? (operator lis) 'funcall) (next (runfunctionexpression lis state (lambda (v) v) (lambda (v) v) throw classname))] ; NEW
       [(eq? (operator lis) '==) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (eq? v1 v2))) throw classname)) throw classname)]
       [(eq? (operator lis) '!=) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (not (eq? v1 v2)))) throw classname)) throw classname)]
       [(eq? (operator lis) '<) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (< v1 v2))) throw classname)) throw classname)]
@@ -440,15 +440,15 @@
 ; uses the return continuation to stop code execution
 (define returnfunction
   (lambda (lis state next break continue return throw classname)
-    (let ([result (mvalue (operatorcdr lis) state (lambda (v) v) throw classname)])
-    (cond
-      [(number? result) (return result)]
-      [(eq? result #t) (return 'true)]
-      [(eq? result 'true) (return 'true)]
-      [(eq? result #f) (return 'false)]
-      [(eq? result 'false) (return 'false)]
-      [else (return result)]
-    ))))
+    (return (mvalue (operatorcdr lis) state (lambda (v) v) throw classname))))
+;    (cond
+ ;     [(number? result) (return result)]
+  ;    [(eq? result #t) (return 'true)]
+   ;   [(eq? result 'true) (return 'true)]
+    ;  [(eq? result #f) (return 'false)]
+     ; [(eq? result 'false) (return 'false)]
+      ;[else (return result)]
+    ;))))
 
 ; executes an if statement (no side effects)
 (define ifstatement
@@ -741,4 +741,4 @@
 ;(interpret "classtest3.txt" 'A)
 
 
-(parser "classtest4.txt")
+(interpret "classtest5.txt" 'A)
