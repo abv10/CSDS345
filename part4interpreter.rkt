@@ -15,11 +15,17 @@
 ; 
 (define executedot
   (lambda (lis state next throw)
-    (next (getvaluefromindex
-     (getinstancefieldvalues (get (firstexpression lis) state)) ; values of instance fields (ordered oldest --> newest
-     (getvariableindex (secondexpression lis) (reverse (getinstancefieldnames (classofinstance (get (firstexpression lis) state)) state)) 0) ; index of variable
-     ))
-    ))
+    (cond
+      [(list? (firstexpression lis))
+       (next (getvaluefromindex
+              (getinstancefieldvalues (createinstance (firstexpression lis) state next throw))
+              (getvariableindex (secondexpression lis) (reverse (getinstancefieldnames (cadr (firstexpression lis)) state)) 0)))]
+      [else
+       (next (getvaluefromindex
+              (getinstancefieldvalues (get (firstexpression lis) state)) ; values of instance fields (ordered oldest --> newest
+              (getvariableindex (secondexpression lis) (reverse (getinstancefieldnames (classofinstance (get (firstexpression lis) state)) state)) 0) ; index of variable
+              ))]
+    )))
 
 
 (define assigndot
@@ -344,7 +350,8 @@
 (define getmethodscope
   (lambda (lis state)
     (cond
-     [(eq? (instancename (cadr lis)) 'this) (cdr state)] ;everything but the local variables
+     [(eq? (instancename (cadr lis)) 'this) (cdr state)]
+     [(list? (instancename (cadr lis))) (adddeclare 'this (createinstance (cadadr lis) state (lambda (v) v) 'throw) (cons (car (cadr (get (cadadr (cadr lis)) state))) (getgloballayer state)))] ;everything but the local variables
      [else (adddeclare 'this (get (instancename (cadr lis)) state) (cons (car (cadr (get (classofinstance (get (instancename (cadr lis)) state)) state))) (getgloballayer state)))])))
 
 (define getgloballayer
@@ -363,6 +370,7 @@
   (lambda (lis state)
     (cond
       [(eq? 'this (instancename lis)) (get (methodname lis) state)]
+      [(list? (instancename lis)) (get (methodname lis) (cadr (get (cadr (instancename lis)) state)))]
       [else (get (methodname lis) (cadr (get (classofinstance (get (instancename lis) state)) state)))])))
 
 
@@ -401,7 +409,7 @@
 (define get
   (lambda (variable state)
     (cond
-      [(and (nonextlayer? state) (emptycurrentlayer? state)) (error 'notassigned)]
+      [(and (nonextlayer? state) (emptycurrentlayer? state)) (error 'noassigned)]
       [(emptycurrentlayer? state) (get variable (nextlayers state))]
       [(rightvariable? variable state) (unbox (selectedvalue state))]
       [else (get variable (remainderofstate state))]
@@ -736,9 +744,9 @@
 ;(parser "classtest1.txt")
 
 ;(interpret "simpleclasstest3.txt" 'A)
-;(interpret "classtest1.txt" 'A)
-;(interpret "classtest2.txt" 'A)
-;(interpret "classtest3.txt" 'A)
-
-
-(interpret "classtest5.txt" 'A)
+;(eq? (interpret "classtest1.txt" 'A) 15)
+;(eq? (interpret "classtest2.txt" 'A) 12)
+;(eq? (interpret "classtest3.txt" 'A) 125)
+;(eq? (interpret "classtest4.txt" 'A) 36)
+;(eq? (interpret "classtest5.txt" 'A) 54)
+(eq? (interpret "classtest6.txt" 'A) 110)
