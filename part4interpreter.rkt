@@ -24,12 +24,11 @@
 
 (define assigndot
   (lambda (lis state next break continue return throw classname)
-    (next (replaceatindex
-     (getvariableindex (secondexpression lis) (reverse (getinstancefieldnames (classofinstance (get (cadr (firstexpression lis)) state)) state)) 0) ; index of variable
+    (next (begin (replaceatindex
+     (getvariableindex (secondexpression (firstexpression lis)) (reverse (getinstancefieldnames (classofinstance (get (cadr (firstexpression lis)) state)) state)) 0) ; index of variable
      (mvalue (secondexpression lis) state next throw classname)
-     (getinstancefieldvalues (get (cadr (firstexpression lis)) state))) ; values of instance fields (ordered oldest --> newest
-     ))
-)
+     (getinstancefieldvalues (get (cadr (firstexpression lis)) state))) state) ; values of instance fields (ordered oldest --> newest
+     )))
 
 (define replaceatindex
   (lambda (index newvalue values)
@@ -171,7 +170,7 @@
       [(eq? (operator lis) '!) (mboolean lis state next throw classname)]
       [(eq? (operator lis) '||) (mboolean lis state next throw classname)]
       [(eq? (operator lis) '&&) (mboolean lis state next throw classname)]
-      [(eq? (operator lis) 'funcall) (next (runfunction lis state (lambda (v) v) (lambda (v) v) throw classname))] ; NEW
+      [(eq? (operator lis) 'funcall) (runfunctionexpression lis state (lambda (v) v) (lambda (v) v) throw classname)] ; NEW
       [(null? (operatorcdr lis)) (mvalue (operator lis) state next throw classname)]
       )))
 
@@ -183,7 +182,7 @@
       [(eq? lis 'true) (next #t)]
       [(eq? lis 'false) (next #f)]
       [(atom? lis) (next (get lis state))]
-      [(eq? (operator lis) 'funcall) (next (runfunction lis state (lambda (v) v) (lambda (v) v) throw classname))] ; NEW
+      [(eq? (operator lis) 'funcall) (runfunctionexpression lis state (lambda (v) v) (lambda (v) v) throw classname)] ; NEW
       [(eq? (operator lis) '==) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (eq? v1 v2))) throw classname)) throw classname)]
       [(eq? (operator lis) '!=) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (not (eq? v1 v2)))) throw classname)) throw classname)]
       [(eq? (operator lis) '<) (mvalue (firstexpression lis) state (lambda (v1) (mvalue (secondexpression lis) state (lambda (v2) (next (< v1 v2))) throw classname)) throw classname)]
@@ -203,7 +202,7 @@
       [(null? lis) (next state)]
       [(atom? lis) (next state)]
       [(list? (operator lis)) (mstate (operator lis) state (lambda (s) (mstate (operatorcdr lis) s next break continue return throw classname)) break continue return throw classname)]
-      [(eq? (operator lis) 'funcall) (next (runfunction lis state next return throw classname))] ; new
+      [(eq? (operator lis) 'funcall) (runfunction lis state next return throw classname)] ; new
       [(eq? (operator lis) 'var) (declare lis state next break continue return throw classname)]
       [(eq? (operator lis) '=) (assign lis state next break continue return throw classname)]
       [(eq? (operator lis) 'return) (returnfunction lis state next break continue return throw classname)]
@@ -276,13 +275,40 @@
     (mstate
      (bodyfromclosure (get 'main state));body
      (bindparams (paramsfromclosure (get 'main state)) empty (addstatelayer (getscope 'main state)) state next return throw)
-     (lambda (s) (next state))
+     (lambda (s) next s)
      (lambda (s) (error 'breakoutsideloop))
      (lambda (s) (error 'continueoutsideloop))
      (lambda (s) (next state))
      (lambda (s e) (throw state e))
      )))
 
+(define runfunctionexpression
+  (lambda (lis state next return throw classname)
+    (cond
+      [(list? (functionname lis))
+       (mstate
+        (bodyfromclosure (getdotfunction (cadr lis) state))
+        (bindparams (paramsfromclosure (getdotfunction (cadr lis) state))(paramsfromcall lis) (addstatelayer (getmethodscope lis state)) state next return throw classname)
+        (lambda (s) (error 'nonextcontinuation))
+        (lambda (s) (error 'breakoutsideloop))
+        (lambda (s) (error 'continueoutsideloop))
+        (lambda (s) s)
+        (lambda (s e) (throw state e))
+        classname
+        )]
+      [else
+       (mstate
+        (bodyfromclosure (get (functionname lis) state));body
+        (bindparams (paramsfromclosure (get (functionname lis) state)) (paramsfromcall lis) (addstatelayer (getscope (functionname lis) state)) state next return throw classname)
+        (lambda (s) (error 'nonextcontinuation))
+        (lambda (s) (error 'breakoutsideloop))
+        (lambda (s) (error 'continueoutsideloop))
+        (lambda (s) s)
+        (lambda (s e) (throw state e))
+        classname
+        )]
+      )))
+      
 (define runfunction
   (lambda (lis state next return throw classname)
     (cond
@@ -293,8 +319,8 @@
         (lambda (s) (next state))
         (lambda (s) (error 'breakoutsideloop))
         (lambda (s) (error 'continueoutsideloop))
-        (lambda (s) s)
-        (lambda (s e) (throw state e))
+        (lambda (s) (next state))
+        (lambda (s e) (throw s e))
         classname
         )]
       [else
@@ -400,9 +426,10 @@
 ; assigns a value to a variable
 (define assign
   (lambda (lis state next break continue return throw classname)
-    (if (not (isdeclared lis state))
-        (error 'notdeclarederror)
-        (next (add (inputvariable lis) (mvalue (valuetoassign lis) state (lambda (v) v) throw classname) state))
+    (cond
+      [(list? (firstexpression lis)) (assigndot lis state next break continue return throw classname)]
+      [(not (isdeclared lis state)) (error 'notdeclarederror)]
+      [else (next (add (inputvariable lis) (mvalue (valuetoassign lis) state (lambda (v) v) throw classname) state))]
     )))
 
 ; uses the return continuation to stop code execution
