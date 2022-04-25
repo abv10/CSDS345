@@ -26,7 +26,7 @@
   (lambda (lis state next break continue return throw classname)
     (next (begin (replaceatindex
      (getvariableindex (secondexpression (firstexpression lis)) (reverse (getinstancefieldnames (classofinstance (get (cadr (firstexpression lis)) state)) state)) 0) ; index of variable
-     (mvalue (secondexpression lis) state next throw classname)
+     (mvalue (secondexpression lis) state (lambda (v) v) throw classname)
      (getinstancefieldvalues (get (cadr (firstexpression lis)) state))) state) ; values of instance fields (ordered oldest --> newest
      )))
 
@@ -86,10 +86,15 @@
 ;GET THE CLASS NAME AND FIELD VARIABLES VALUES
 (define createinstance
   (lambda (lis state next throw)
-    (next (list (firstexpression lis) (reverse (cadar (getvariablesfromclosure (firstexpression lis) state)))))))
+    (next (list (firstexpression lis) (reverse (rebox (cadar (getvariablesfromclosure (firstexpression lis) state))))))))
 
-
-
+; takes a list of boxed values and puts them in a different box
+(define rebox
+  (lambda (lis)
+    (cond
+      [(null? lis) lis]
+      [else (cons (box (unbox (car lis))) (rebox (cdr lis)))]
+   )))
 (define getsuperclassmethods
   (lambda (name state)
     (cond
