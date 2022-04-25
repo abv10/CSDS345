@@ -85,7 +85,8 @@
       (getsuperclassclosure (superclass lis) state)
       ;methods
       (getmethods (classbody lis) (getsuperclassmethods (superclass lis) state) (lambda (s) s) break continue return throw (classname lis)) ;;NEED TO UPDATE THIS IF THERE'S NO SUPER CLASS (START WITH DIFFERENT STATE)
-      (getinstancevariables (classbody lis) (getsuperclassfields (superclass lis) state) (lambda (s) s) break continue return throw classname) ;;SAME AS ABOVE
+      (getinstancevariables (classbody lis) (getsuperclassfields (superclass lis) state) (lambda (s) s) break continue return throw classname)
+      (classname lis)
       )
      state))))
 
@@ -116,6 +117,10 @@
 (define getmethodsfromclosure
   (lambda (name state)
     (cadr (getsuperclassclosure name state))))
+
+(define getsuperfromclosure
+  (lambda (name state)
+    (car (getsuperclassclosure name state))))
 
 (define getvariablesfromclosure
   (lambda (name state)
@@ -351,6 +356,8 @@
   (lambda (lis state)
     (cond
      [(eq? (instancename (cadr lis)) 'this) (cdr state)]
+     [(eq? (instancename (cadr lis)) 'super)
+      (adddeclare 'this (createinstance (list 'new (cadddr (car (get (classofinstance (get 'this state)) state)))) state (lambda (v) v) 'throw) (cons (car (cadr (car (get (classofinstance (get 'this state)) state)))) (getgloballayer state)))]
      [(list? (instancename (cadr lis))) (adddeclare 'this (createinstance (cadadr lis) state (lambda (v) v) 'throw) (cons (car (cadr (get (cadadr (cadr lis)) state))) (getgloballayer state)))] ;everything but the local variables
      [else (adddeclare 'this (get (instancename (cadr lis)) state) (cons (car (cadr (get (classofinstance (get (instancename (cadr lis)) state)) state))) (getgloballayer state)))])))
 
@@ -370,6 +377,7 @@
   (lambda (lis state)
     (cond
       [(eq? 'this (instancename lis)) (get (methodname lis) state)]
+      [(eq? 'super (instancename lis)) (get (methodname lis) (cadr (car (get (car (get 'this state)) state))))]
       [(list? (instancename lis)) (get (methodname lis) (cadr (get (cadr (instancename lis)) state)))]
       [else (get (methodname lis) (cadr (get (classofinstance (get (instancename lis) state)) state)))])))
 
@@ -409,7 +417,7 @@
 (define get
   (lambda (variable state)
     (cond
-      [(and (nonextlayer? state) (emptycurrentlayer? state)) (error 'noassigned)]
+      [(and (nonextlayer? state) (emptycurrentlayer? state)) (error variable)]
       [(emptycurrentlayer? state) (get variable (nextlayers state))]
       [(rightvariable? variable state) (unbox (selectedvalue state))]
       [else (get variable (remainderofstate state))]
@@ -744,9 +752,11 @@
 ;(parser "classtest1.txt")
 
 ;(interpret "simpleclasstest3.txt" 'A)
-;(eq? (interpret "classtest1.txt" 'A) 15)
-;(eq? (interpret "classtest2.txt" 'A) 12)
-;(eq? (interpret "classtest3.txt" 'A) 125)
-;(eq? (interpret "classtest4.txt" 'A) 36)
-;(eq? (interpret "classtest5.txt" 'A) 54)
+(eq? (interpret "classtest1.txt" 'A) 15)
+(eq? (interpret "classtest2.txt" 'A) 12)
+(eq? (interpret "classtest3.txt" 'A) 125)
+(eq? (interpret "classtest4.txt" 'A) 36)
+(eq? (interpret "classtest5.txt" 'A) 54)
 (eq? (interpret "classtest6.txt" 'A) 110)
+
+;(eq? (interpret "classtest7.txt" 'C) 26)
