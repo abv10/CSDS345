@@ -294,7 +294,9 @@
 
 (define getmethodscope
   (lambda (lis state)
-    (cons (cadr (get (classofinstance (get (instancename (cadr lis)) state)) state)) (getgloballayer state))))
+    (cond
+     [(eq? (instancename (cadr lis)) 'this) (cdr state)] ;everything but the local variables
+     [else (adddeclare 'this (get (instancename (cadr lis)) state) (cons (car (cadr (get (classofinstance (get (instancename (cadr lis)) state)) state))) (getgloballayer state)))])))
 
 (define getgloballayer
   (lambda (state)
@@ -310,7 +312,9 @@
 ;Get the instance name --> get the class of the instance --> get the method from that class
 (define getdotfunction
   (lambda (lis state)
-    (get (methodname lis) (cadr (get (classofinstance (get (instancename lis) state)) state)))))
+    (cond
+      [(eq? 'this (instancename lis)) (get (methodname lis) state)]
+      [else (get (methodname lis) (cadr (get (classofinstance (get (instancename lis) state)) state)))])))
 
 
 (define classofinstance
@@ -681,7 +685,9 @@
 ;__________TESTS_____________
 ;(parser "classtest1.txt")
 
-(interpret "simpleclasstest3.txt" 'A)
-(interpret "simpleclasstest1.txt" 'A)
+;(interpret "simpleclasstest3.txt" 'A)
+(interpret "classtest1.txt" 'A)
+(interpret "classtest2.txt" 'A)
+(interpret "classtest3.txt" 'A)
 
 
