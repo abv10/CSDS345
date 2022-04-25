@@ -15,8 +15,11 @@
 ; 
 (define executedot
   (lambda (lis state next throw)
-    (getvaluefromindex (getvariableindex (secondexpression lis) (getinstancefields ((firstexpression lis) state) 0))
-    )))
+    (next (getvaluefromindex
+     (getinstancefieldvalues (get (firstexpression lis) state)) ; values of instance fields (ordered oldest --> newest
+     (getvariableindex (secondexpression lis) (reverse (getinstancefieldnames (classofinstance (get (firstexpression lis) state)) state)) 0) ; index of variable
+     ))
+    ))
 
 ; gets the index of a variable. used to match variables between class and instance closures
 ; (getvariableindex 'x '(a b c d x e f) 0) => 4
@@ -96,8 +99,8 @@
         '()
         (get name state))))
 
-; returns instance fields of class
-(define getinstancefields
+; returns instance field names of class
+(define getinstancefieldnames
   (lambda (name state)
     (caar (getvariablesfromclosure name state))))
 
@@ -268,7 +271,7 @@
       [(list? (functionname lis))
        (mstate
         (bodyfromclosure (getdotfunction (cadr lis) state))
-        (bindparams (paramsfromclosure (getdotfunction (cadr lis) state))(paramsfromcall lis) (addstatelayer (getmethodscope lis state)) state next return throw)
+        (bindparams (paramsfromclosure (getdotfunction (cadr lis) state))(paramsfromcall lis) (addstatelayer (getmethodscope lis state)) state next return throw classname)
         (lambda (s) (next state))
         (lambda (s) (error 'breakoutsideloop))
         (lambda (s) (error 'continueoutsideloop))
@@ -279,7 +282,7 @@
       [else
        (mstate
         (bodyfromclosure (get (functionname lis) state));body
-        (bindparams (paramsfromclosure (get (functionname lis) state)) (paramsfromcall lis) (addstatelayer (getscope (functionname lis) state)) state next return throw)
+        (bindparams (paramsfromclosure (get (functionname lis) state)) (paramsfromcall lis) (addstatelayer (getscope (functionname lis) state)) state next return throw classname)
         (lambda (s) (next state))
         (lambda (s) (error 'breakoutsideloop))
         (lambda (s) (error 'continueoutsideloop))
@@ -316,7 +319,7 @@
 
 (define getinstancefieldvalues
   (lambda (lis)
-    (unbox (cadr lis))))
+    (cadr lis)))
 
 (define instancename
   (lambda (lis)
@@ -327,11 +330,11 @@
     (caddr lis)))
      
 (define bindparams
-  (lambda (formal actual environment state next return throw)
+  (lambda (formal actual environment state next return throw classname)
     (cond
       [(and (null? formal) (null? actual)) environment]
       [(or (null? formal) (null? actual)) (error 'mismatchparams)]
-      [else (bindparams (remaining formal) (remaining actual) (adddeclare (selected formal) (mvalue (selected actual) state (lambda (v) v) throw) environment) state next return throw)])))
+      [else (bindparams (remaining formal) (remaining actual) (adddeclare (selected formal) (mvalue (selected actual) state (lambda (v) v) throw classname) environment) state next return throw classname)])))
 
 (define remaining
   (lambda (lis)
