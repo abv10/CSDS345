@@ -10,13 +10,13 @@
     (runmain (addglobal (parser filename) (initialstate) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (s) s) 'throw) (lambda (v) v) (lambda (v) v) 'throw)))
 (define interpret
   (lambda (filename classname)
-    (executemain (addallclassclosure (parser filename) (initialstate) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (s) s) 'throw) classname classname)))
+    (executemain (addallclassclosure (parser filename) (initialstate) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (s) s) 'throw) classname)))
 
-
+; 
 (define executedot
   (lambda (lis state next throw)
-    '()
-    ))
+    (getvaluefromindex (getvariableindex (secondexpression lis) (getinstancefields ((firstexpression lis) state) 0))
+    )))
 
 ; gets the index of a variable. used to match variables between class and instance closures
 ; (getvariableindex 'x '(a b c d x e f) 0) => 4
@@ -28,21 +28,30 @@
       [else (getvariableindex name (cdr variables) (+ index 1))]
    )))
 
+; gets value from index of variable. Values will all be in boxes for the input
+(define getvaluefromindex
+  (lambda (values index)
+    (cond
+      [(null? values) (error 'incorrectindex)]
+      [(zero? index) (unbox (car values))]
+      [else (getvaluefromindex (cdr values) (- index 1))]
+      )))
+
     ;#FILL THIS IN
 (define addallclassclosure
   (lambda (lis state next break continue return throw)
     (cond
       ((null? lis) (next state))
-      [(list? (operator lis)) (createclosure (operator lis) state (lambda (s) (addallclassclosure (cdr lis) s next break continue return throw)) break continue return throw)]
+      [(list? (operator lis)) (createclosure (operator lis) state (lambda (s) (addallclassclosure (cdr lis) s next break continue return throw)) break continue return throw classname)]
       [else (next state)]))
   )
 
 (define executemain
-  (lambda (state name classname)
-    (mstate (get 'main (getmethodsfromclosure name state)) (addstatelayer state) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (v) v) 'throw classname)))
+  (lambda (state name)
+    (mstate (get 'main (getmethodsfromclosure name state)) (addstatelayer state) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (v) v) 'throw name)))
 
 (define createclosure
-  (lambda (lis state next break continue return throw)
+  (lambda (lis state next break continue return throw classname)
     (next (adddeclare
      (classname lis)
      (list
@@ -50,7 +59,7 @@
       (getsuperclassclosure (superclass lis) state)
       ;methods
       (getmethods (classbody lis) (getsuperclassmethods (superclass lis) state) (lambda (s) s) break continue return throw (classname lis)) ;;NEED TO UPDATE THIS IF THERE'S NO SUPER CLASS (START WITH DIFFERENT STATE)
-      (getinstancevariables (classbody lis) (getsuperclassfields (superclass lis) state) (lambda (s) s) break continue return throw) ;;SAME AS ABOVE
+      (getinstancevariables (classbody lis) (getsuperclassfields (superclass lis) state) (lambda (s) s) break continue return throw classname) ;;SAME AS ABOVE
       )
      state))))
 
@@ -87,6 +96,10 @@
         '()
         (get name state))))
 
+; returns instance fields of class
+(define getinstancefields
+  (lambda (name state)
+    (caar (getvariablesfromclosure name state))))
 
 (define getmethods
   (lambda (lis state next break continue return throw classname)
@@ -99,11 +112,11 @@
        )))
 
 (define getinstancevariables
-  (lambda (lis state next break continue return throw)
+  (lambda (lis state next break continue return throw classname)
     (cond
        [(null? lis) (next state)]
-       [(list? (operator lis)) (getinstancevariables (operator lis) state (lambda (s) (getinstancevariables (operatorcdr lis) s next break continue return throw)) break continue return throw)]
-       [(eq? (operator lis) 'var) (classdeclare lis state next break continue return throw)]
+       [(list? (operator lis)) (getinstancevariables (operator lis) state (lambda (s) (getinstancevariables (operatorcdr lis) s next break continue return throw classname)) break continue return throw classname)]
+       [(eq? (operator lis) 'var) (classdeclare lis state next break continue return throw classname)]
        [else (next state)]
        )))
 
@@ -275,6 +288,7 @@
         classname
      )]
       )))
+
 (define getmethodscope
   (lambda (lis state)
     (cons (cadr (get (classofinstance (get (instancename (cadr lis)) state)) state)) (getgloballayer state))))
@@ -288,7 +302,7 @@
        
 (define dotinstanceclosure
   (lambda (lis state)
-    (get (instancename (cadr lis) state))))
+    (get (instancename (cadr lis)) state)))
     
 ;Get the instance name --> get the class of the instance --> get the method from that class
 (define getdotfunction
@@ -300,7 +314,10 @@
   (lambda (lis)
     (car lis)))
 
-                     
+(define getinstancefieldvalues
+  (lambda (lis)
+    (unbox (cadr lis))))
+
 (define instancename
   (lambda (lis)
     (cadr lis)))
