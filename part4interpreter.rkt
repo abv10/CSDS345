@@ -19,7 +19,7 @@
       [(list? (firstexpression lis))
        (next (getvaluefromindex
               (getinstancefieldvalues (createinstance (firstexpression lis) state next throw))
-              (getvariableindex (secondexpression lis) ((getinstancefieldnames (cadr (firstexpression lis)) state) (- (length (getinstancefieldnames (classofinstance (get (firstexpression lis) state)) state)) 1)))))]
+              (getvariableindex (secondexpression lis) (getinstancefieldnames (cadr (firstexpression lis)) state) (- (length (getinstancefieldnames (cadr (firstexpression lis)) state)) 1))))]
       [else
        (next (getvaluefromindex
               (getinstancefieldvalues (get (firstexpression lis) state)) ; values of instance fields (ordered oldest --> newest
@@ -166,7 +166,7 @@
       [(eq? lis #t) (next #t)]
       [(eq? lis #f) (next #f)]
       [(eq? lis 'false) (next #f)]
-      ;[(atom? lis) (next (executedot (cons 'dot (cons 'this (cons lis '()))) state next throw))]
+      [(atom? lis) (next (getlocaltheninstance lis state (lambda () state)))]
       [(and (atom? lis) (eq? (get lis state) 'declared)) (next (error 'notassignederror))]
       [(atom? lis) (next (get lis state))]
       [(eq? (operator lis) 'new) (createinstance lis state next throw)]
@@ -424,6 +424,16 @@
       [else (get variable (remainderofstate state))]
     )))
 
+; searches for value of a variable. If it doesn't find it, searches in 'this
+(define getlocaltheninstance
+  (lambda (variable state restorestate)
+    (cond
+      [(and (nonextlayer? state) (emptycurrentlayer? state)) (executedot (list 'dot 'this variable) (restorestate) (lambda (v) v) (lambda (v) (error 'invalidthrow)))]
+      [(emptycurrentlayer? state) (getlocaltheninstance variable (nextlayers state) restorestate)]
+      [(rightvariable? variable state) (unbox (selectedvalue state))]
+      [else (getlocaltheninstance variable (remainderofstate state) restorestate)]
+    )))
+
 (define declare
   (lambda (lis state next break continue return throw classname)
     (declarehelper lis state next break continue return throw #f classname)))
@@ -614,12 +624,17 @@
     '(()())))
 
 (define getnoerror
+  ;(lambda (variable state restorestate)
   (lambda (variable state)
     (cond
+      ;[(eq? restorestate 'error) 'notdeclared]
+      ;[(and (nonextlayer? state) (emptycurrentlayer? state)) (executedot (list 'dot 'this variable) (restorestate) (lambda (v) v) (lambda (v) (error 'invalidthrow)))]
       [(and (nonextlayer? state) (emptycurrentlayer? state)) 'notdeclared]
+      ;[(emptycurrentlayer? state) (getnoerror variable (nextlayers state) restorestate)]
       [(emptycurrentlayer? state) (getnoerror variable (nextlayers state))]
       [(rightvariable? variable state) (unbox (selectedvalue state))]
       [else (getnoerror variable (remainderofstate state))]
+      ;[else (getnoerror variable (remainderofstate state) restorestate)]
     )))
 
 ;cons c d (((a)(b))((x y)(x z))) --> (((c d) (d b))((x y)(x z))
@@ -678,6 +693,7 @@
 
 (define isdeclared
   (lambda (lis state)
+    ;(not (eq? (getnoerror (inputvariable lis) state (lambda () state)) 'notdeclared))))
     (not (eq? (getnoerror (inputvariable lis) state) 'notdeclared))))
 
 (define inputvariable
@@ -759,5 +775,5 @@
 (eq? (interpret "classtest4.txt" "A") 36)
 (eq? (interpret "classtest5.txt" "A") 54)
 (eq? (interpret "classtest6.txt" "A") 110)
-
 (eq? (interpret "classtest7.txt" "C") 26)
+;(interpret "classtest8.txt" "Square")
