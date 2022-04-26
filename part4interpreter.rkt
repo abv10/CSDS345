@@ -19,11 +19,11 @@
       [(list? (firstexpression lis))
        (next (getvaluefromindex
               (getinstancefieldvalues (createinstance (firstexpression lis) state next throw))
-              (getvariableindex (secondexpression lis) (reverse (getinstancefieldnames (cadr (firstexpression lis)) state)) 0)))]
+              (getvariableindex (secondexpression lis) ((getinstancefieldnames (cadr (firstexpression lis)) state) (- (length (getinstancefieldnames (classofinstance (get (firstexpression lis) state)) state)) 1)))))]
       [else
        (next (getvaluefromindex
               (getinstancefieldvalues (get (firstexpression lis) state)) ; values of instance fields (ordered oldest --> newest
-              (getvariableindex (secondexpression lis) (reverse (getinstancefieldnames (classofinstance (get (firstexpression lis) state)) state)) 0) ; index of variable
+              (getvariableindex (secondexpression lis) (getinstancefieldnames (classofinstance (get (firstexpression lis) state)) state) (- (length (getinstancefieldnames (classofinstance (get (firstexpression lis) state)) state)) 1)) ; index of variable
               ))]
     )))
 
@@ -31,7 +31,7 @@
 (define assigndot
   (lambda (lis state next break continue return throw classname)
     (next (begin (replaceatindex
-     (getvariableindex (secondexpression (firstexpression lis)) (reverse (getinstancefieldnames (classofinstance (get (cadr (firstexpression lis)) state)) state)) 0) ; index of variable
+     (getvariableindex (secondexpression (firstexpression lis)) (getinstancefieldnames (classofinstance (get (cadr (firstexpression lis)) state)) state) (- (length (getinstancefieldnames (classofinstance (get (cadr (firstexpression lis)) state)) state)) 1)) ; index of variable
      (mvalue (secondexpression lis) state (lambda (v) v) throw classname)
      (getinstancefieldvalues (get (cadr (firstexpression lis)) state))) state) ; values of instance fields (ordered oldest --> newest
      )))
@@ -45,13 +45,13 @@
            
     
 ; gets the index of a variable. used to match variables between class and instance closures
-; (getvariableindex 'x '(a b c d x e f) 0) => 4
+; (getvariableindex 'x '(a b c d x e f) 0) => 2
 (define getvariableindex
   (lambda (name variables index)
     (cond
       [(null? variables) (error 'notdeclared)]
       [(eq? name (car variables)) index]
-      [else (getvariableindex name (cdr variables) (+ index 1))]
+      [else (getvariableindex name (cdr variables) (- index 1))]
    )))
 
 ; gets value from index of variable. Values will all be in boxes for the input
@@ -166,6 +166,7 @@
       [(eq? lis #t) (next #t)]
       [(eq? lis #f) (next #f)]
       [(eq? lis 'false) (next #f)]
+      ;[(atom? lis) (next (executedot (cons 'dot (cons 'this (cons lis '()))) state next throw))]
       [(and (atom? lis) (eq? (get lis state) 'declared)) (next (error 'notassignederror))]
       [(atom? lis) (next (get lis state))]
       [(eq? (operator lis) 'new) (createinstance lis state next throw)]
@@ -759,4 +760,4 @@
 (eq? (interpret "classtest5.txt" "A") 54)
 (eq? (interpret "classtest6.txt" "A") 110)
 
-;(eq? (interpret "classtest7.txt" "C") 26)
+(eq? (interpret "classtest7.txt" "C") 26)
