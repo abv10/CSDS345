@@ -49,7 +49,7 @@
 (define getvariableindex
   (lambda (name variables index)
     (cond
-      [(null? variables) (error 'notdeclared)]
+      [(null? variables) 'notdeclared]
       [(eq? name (car variables)) index]
       [else (getvariableindex name (cdr variables) (- index 1))]
    )))
@@ -221,7 +221,8 @@
       [(list? (operator lis)) (mstate (operator lis) state (lambda (s) (mstate (operatorcdr lis) s next break continue return throw classname)) break continue return throw classname)]
       [(eq? (operator lis) 'funcall) (runfunction lis state next return throw classname)] ; new
       [(eq? (operator lis) 'var) (declare lis state next break continue return throw classname)]
-      [(eq? (operator lis) '=) (assign lis state next break continue return throw classname)]
+      [(and (eq? (operator lis) '=) (not (isdeclared (list '= 'this 'test) state))) (assign lis state next break continue return throw classname)] ; checks if we are inside an instance
+      [(eq? (operator lis) '=) (assignlocaltheninstance lis state next break continue return throw classname)]
       [(eq? (operator lis) 'return) (returnfunction lis state next break continue return throw classname)]
       [(and (eq? (operator lis) 'function)(not (eq? (functionname lis) 'main))) (addfunctionclosure lis state next)] ;new
       [(eq? (operator lis) 'if) (ifstatement lis state next break continue return throw classname)]
@@ -464,6 +465,15 @@
       [else (next (add (inputvariable lis) (mvalue (valuetoassign lis) state (lambda (v) v) throw classname) state))]
     )))
 
+(define assignlocaltheninstance
+  (lambda (lis state next break continue return throw classname)
+    (cond
+      [(list? (firstexpression lis)) (assigndot lis state next break continue return throw classname)]
+      [(eq? (isdeclaredlocalorinstance lis state) 'notdeclared) (error 'notdeclarederror)]
+      [(eq? (isdeclaredlocalorinstance lis state) 'local) (next (add (inputvariable lis) (mvalue (valuetoassign lis) state (lambda (v) v) throw classname) state))]
+      [else (assigndot (list '= (list 'dot 'this (inputvariable lis)) (valuetoassign lis)) state next break continue return throw classname)]
+    )))
+
 ; uses the return continuation to stop code execution
 (define returnfunction
   (lambda (lis state next break continue return throw classname)
@@ -693,8 +703,15 @@
 
 (define isdeclared
   (lambda (lis state)
-    ;(not (eq? (getnoerror (inputvariable lis) state (lambda () state)) 'notdeclared))))
     (not (eq? (getnoerror (inputvariable lis) state) 'notdeclared))))
+
+(define isdeclaredlocalorinstance
+  (lambda (lis state)
+    (cond
+      [(isdeclared lis state) 'local]
+      [(not (eq? (executedot (list 'dot 'this (inputvariable lis)) state (lambda (v) v) (lambda (v) (error 'invalidthrow))) 'notdeclared)) 'instancefield]
+      [else 'notdeclared])))
+      
 
 (define inputvariable
   (lambda (lis)
@@ -776,4 +793,5 @@
 (eq? (interpret "classtest5.txt" "A") 54)
 (eq? (interpret "classtest6.txt" "A") 110)
 (eq? (interpret "classtest7.txt" "C") 26)
-;(interpret "classtest8.txt" "Square")
+(interpret "classtest8.txt" "Square")
+;(interpret "classtest10.txt" "List")
