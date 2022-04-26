@@ -306,7 +306,7 @@
       [(list? (functionname lis))
        (mstate
         (bodyfromclosure (getdotfunction (cadr lis) state))
-        (bindparams (paramsfromclosure (getdotfunction (cadr lis) state))(paramsfromcall lis) (addstatelayer (getmethodscope lis state)) state next return throw classname)
+        (bindparams (paramsfromclosure (getdotfunction (cadr lis) state)) (paramsfromcall lis) (addstatelayer (getmethodscope lis state)) state next return throw classname)
         (lambda (s) (error 'nonextcontinuation))
         (lambda (s) (error 'breakoutsideloop))
         (lambda (s) (error 'continueoutsideloop))
@@ -316,8 +316,8 @@
         )]
       [else
        (mstate
-        (bodyfromclosure (get (functionname lis) state));body
-        (bindparams (paramsfromclosure (get (functionname lis) state)) (paramsfromcall lis) (addstatelayer (getscope (functionname lis) state)) state next return throw classname)
+        (bodyfromclosure (getdotfunction (list 'dot 'this (functionname lis)) state));body
+        (bindparams (paramsfromclosure (getdotfunction (list 'dot 'this (functionname lis)) state)) (paramsfromcall lis) (addstatelayer (getmethodscope (list 'funcall (list 'dot 'this (functionname lis))) state)) state next return throw classname)
         (lambda (s) (error 'nonextcontinuation))
         (lambda (s) (error 'breakoutsideloop))
         (lambda (s) (error 'continueoutsideloop))
@@ -343,8 +343,8 @@
         )]
       [else
        (mstate
-        (bodyfromclosure (get (functionname lis) state));body
-        (bindparams (paramsfromclosure (get (functionname lis) state)) (paramsfromcall lis) (addstatelayer (getscope (functionname lis) state)) state next return throw classname)
+        (bodyfromclosure (getdotfunction (list 'dot 'this (functionname lis)) state));body
+        (bindparams (paramsfromclosure (get (functionname lis) state)) (paramsfromcall lis) (addstatelayer (getmethodscope (list 'funcall (list 'dot 'this (functionname lis))) state)) state next return throw classname)
         (lambda (s) (next state))
         (lambda (s) (error 'breakoutsideloop))
         (lambda (s) (error 'continueoutsideloop))
