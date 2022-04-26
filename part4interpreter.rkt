@@ -10,7 +10,7 @@
     (runmain (addglobal (parser filename) (initialstate) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (s) s) 'throw) (lambda (v) v) (lambda (v) v) 'throw)))
 (define interpret
   (lambda (filename classname)
-    (executemain (addallclassclosure (parser filename) (initialstate) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (s) s) 'throw) classname)))
+    (executemain (addallclassclosure (parser filename) (initialstate) (lambda (s) s) (lambda (s) s) (lambda (s) s) (lambda (s) s) 'throw) (string->symbol classname))))
 
 ; 
 (define executedot
@@ -751,12 +751,12 @@
 ;__________TESTS_____________
 ;(parser "classtest1.txt")
 
-;(interpret "simpleclasstest3.txt" 'A)
-(eq? (interpret "classtest1.txt" 'A) 15)
-(eq? (interpret "classtest2.txt" 'A) 12)
-(eq? (interpret "classtest3.txt" 'A) 125)
-(eq? (interpret "classtest4.txt" 'A) 36)
-(eq? (interpret "classtest5.txt" 'A) 54)
-(eq? (interpret "classtest6.txt" 'A) 110)
+;(interpret "simpleclasstest3.txt" "A")
+(eq? (interpret "classtest1.txt" "A") 15)
+(eq? (interpret "classtest2.txt" "A") 12)
+(eq? (interpret "classtest3.txt" "A") 125)
+(eq? (interpret "classtest4.txt" "A") 36)
+(eq? (interpret "classtest5.txt" "A") 54)
+(eq? (interpret "classtest6.txt" "A") 110)
 
-;(eq? (interpret "classtest7.txt" 'C) 26)
+;(eq? (interpret "classtest7.txt" "C") 26)
